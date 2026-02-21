@@ -25,9 +25,10 @@ st.info(st.session_state.kural)
 # --- 4. THE BRAIN ---
 def get_transcript(video_id):
     try:
-        # Using your uploaded cookies.txt for the VIP Pass
-        data = YouTubeTranscriptApi.get_transcript(video_id, cookies='cookies.txt')
-        return " ".join([item['text'] for item in data])
+        # The fix: change 'get_transcript' to 'get_transcripts' 
+        # and we select the first one in the list [0]
+        data = YouTubeTranscriptApi.get_transcripts([video_id], cookies='cookies.txt')
+        return " ".join([item['text'] for item in data[0][video_id]])
     except Exception as e:
         return f"Error: {str(e)}"
 
