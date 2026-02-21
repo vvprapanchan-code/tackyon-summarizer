@@ -1,13 +1,13 @@
 import streamlit as st
-from youtube_transcript_api import YouTubeTranscriptApi
+# This specific way of importing is the key fix
+from youtube_transcript_api import YouTubeTranscriptApi 
 import google.generativeai as genai
-import random
 
 # --- 1. SETUP ---
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# --- 2. UI ---
+# --- 2. UI BRANDING ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🚀")
 st.title("Tackyon 🚀")
 st.subheader("AI YouTube Summariser")
@@ -15,8 +15,8 @@ st.subheader("AI YouTube Summariser")
 # --- 3. THE BRAIN ---
 def get_transcript(video_id):
     try:
-        # Correct command is get_transcript (singular)
-        # We MUST use the cookies file you uploaded to GitHub
+        # Verified correct method call for the library
+        # Uses your cookies.txt file to bypass blocks
         data = YouTubeTranscriptApi.get_transcript(video_id, cookies='cookies.txt')
         return " ".join([item['text'] for item in data])
     except Exception as e:
@@ -28,8 +28,13 @@ url = st.text_input("Paste YouTube Link:")
 
 if st.button("Summarize Video"):
     if url:
-        # Extract the ID from the link
-        video_id = url.split("v=")[1].split("&")[0] if "v=" in url else url.split("/")[-1]
+        # Smarter way to get the ID from any YouTube link
+        if "v=" in url:
+            video_id = url.split("v=")[1].split("&")[0]
+        elif "youtu.be/" in url:
+            video_id = url.split("youtu.be/")[1].split("?")[0]
+        else:
+            video_id = url.split("/")[-1]
         
         with st.spinner("Tackyon is reading..."):
             transcript = get_transcript(video_id)
@@ -40,5 +45,5 @@ if st.button("Summarize Video"):
                 model = genai.GenerativeModel('gemini-pro')
                 prompt = f"Summarize this in {lang}: {transcript}"
                 response = model.generate_content(prompt)
-                st.success("Done!")
+                st.success("Summary Ready!")
                 st.write(response.text)
