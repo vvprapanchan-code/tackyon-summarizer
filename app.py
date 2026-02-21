@@ -1,4 +1,15 @@
 import streamlit as st
+import streamlit as st
+from PIL import Image  # Add this line to handle images
+
+# --- LOGO SETUP ---
+# This opens your logo file
+logo = Image.open('logo.png')
+
+# This displays the logo at the top, centered
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.image(logo, width=200)
 from yt_dlp_transcript import yt_dlp_transcript
 import google.generativeai as genai
 
