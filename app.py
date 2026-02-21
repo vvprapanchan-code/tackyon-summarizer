@@ -25,18 +25,9 @@ st.info(st.session_state.kural)
 # --- 4. THE BRAIN (The Fix is Here!) ---
 def get_transcript(video_id):
     try:
-        # We try to get the transcript in any available language
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        
-        # Try to find manually created transcripts first, then auto-generated
-        try:
-            transcript = transcript_list.find_manually_created_transcript(['en', 'ta', 'hi'])
-        except:
-            transcript = transcript_list.find_generated_transcript(['en', 'ta', 'hi'])
-            
-        data = transcript.fetch()
+        # This tells the app to use your uploaded cookies file
+        data = YouTubeTranscriptApi.get_transcript(video_id, cookies='cookies.txt')
         return " ".join([item['text'] for item in data])
-    
     except Exception as e:
         return f"Error: {str(e)}"
 
