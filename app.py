@@ -22,7 +22,7 @@ if st.button("Summarize"):
                 if not text:
                     st.error("No transcript found for this video.")
                 else:
-                    model = genai.GenerativeModel('gemini-pro')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     response = model.generate_content(f"Summarize in {lang}: {text}")
                     st.success("Victory! Summary below:")
                     st.write(response.text)
