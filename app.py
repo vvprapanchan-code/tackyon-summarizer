@@ -15,7 +15,12 @@ import google.generativeai as genai
 
 # --- 1. SETUP ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-
+# --- 0. PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Tackyon AI",
+    page_icon="logo.png",  # This changes the browser tab and shortcut icon!
+    layout="centered"
+)
 st.title("Tackyon 🚀")
 st.subheader("AI YouTube Summariser")
 
