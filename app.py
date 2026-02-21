@@ -1,5 +1,5 @@
 import streamlit as st
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
 import random
 
@@ -22,10 +22,10 @@ st.title("Tackyon 🚀")
 st.subheader("AI YouTube Summariser")
 st.info(st.session_state.kural)
 
-# --- 4. THE BRAIN (The Fix is Here!) ---
+# --- 4. THE BRAIN ---
 def get_transcript(video_id):
     try:
-        # This tells the app to use your uploaded cookies file
+        # Using your uploaded cookies.txt for the VIP Pass
         data = YouTubeTranscriptApi.get_transcript(video_id, cookies='cookies.txt')
         return " ".join([item['text'] for item in data])
     except Exception as e:
@@ -37,13 +37,14 @@ url = st.text_input("YouTube Link:")
 
 if st.button("Summarize Video"):
     if "v=" in url or "youtu.be/" in url:
-        video_id = url.split("v=")[-1].split("?")[0] if "v=" in url else url.split("/")[-1].split("?")[0]
+        # Extracting Video ID
+        video_id = url.split("v=")[-1].split("&")[0] if "v=" in url else url.split("/")[-1].split("?")[0]
         
         with st.spinner("Tackyon is reading the video..."):
             text = get_transcript(video_id)
             
             if "Error:" in text:
-                st.error("YouTube blocked the automated request. Try a different video or try again in a few minutes.")
+                st.error(f"YouTube block detected. Technical info: {text}")
             else:
                 model = genai.GenerativeModel('gemini-pro')
                 prompt = f"Summarize this YouTube transcript in {lang}: {text}"
