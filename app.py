@@ -1,5 +1,6 @@
 import streamlit as st
 import youtube_transcript_api
+from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
 
 # --- 1. SETUP ---
@@ -14,9 +15,9 @@ st.subheader("AI YouTube Summariser")
 # --- 3. THE BRAIN ---
 def get_transcript(video_id):
     try:
-        # This specific call method is the industry standard for this library
-        loader = youtube_transcript_api.YouTubeTranscriptApi()
-        data = loader.get_transcript(video_id, cookies='cookies.txt')
+        # This is the most stable way to call the library
+        # It uses your uploaded cookies.txt to bypass the block
+        data = YouTubeTranscriptApi.get_transcript(video_id, cookies='cookies.txt')
         return " ".join([item['text'] for item in data])
     except Exception as e:
         return f"Error: {str(e)}"
@@ -27,14 +28,9 @@ url = st.text_input("Paste YouTube Link here:")
 
 if st.button("Summarize Video"):
     if url:
-        # This extracts the ID from both long and short links
-        if "v=" in url:
-            video_id = url.split("v=")[1].split("&")[0]
-        elif "youtu.be/" in url:
-            video_id = url.split("youtu.be/")[1].split("?")[0]
-        else:
-            video_id = url.split("/")[-1]
-            
+        # Simplified ID extraction
+        video_id = url.split("v=")[1].split("&")[0] if "v=" in url else url.split("/")[-1].split("?")[0]
+        
         with st.spinner("Tackyon is reading..."):
             transcript_text = get_transcript(video_id)
             
