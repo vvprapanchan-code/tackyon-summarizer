@@ -45,7 +45,8 @@ if st.button("Summarize Video"):
                     st.error("No transcript found for this video. Is it a music video or restricted?")
                 else:
                     # AI Processing using the model that worked yesterday
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    # CHANGE THIS LINE:
+                    model = genai.GenerativeModel('gemini-3-flash')
                     prompt = f"Provide a detailed summary of this YouTube transcript in {lang}: {text}"
                     response = model.generate_content(prompt)
                     
@@ -55,3 +56,22 @@ if st.button("Summarize Video"):
                 st.error(f"Something went wrong: {str(e)}")
     else:
         st.info("Please paste a link to get started.")
+        import streamlit.components.v1 as components
+
+# Replace the data-ad-slot value with your REAL ID once approved
+ad_code = """
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
+     crossorigin="anonymous"></script>
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-app-pub-3510846848926159"
+     data-ad-slot="6300978111" 
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+"""
+
+# This renders the ad banner
+components.html(ad_code, height=100)
