@@ -1,57 +1,62 @@
 import streamlit as st
-from PIL import Image
-import os
-from yt_dlp_transcript import yt_dlp_transcript
+from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
+import random
 
-# --- 1. MOBILE CONFIGURATION ---
-st.set_page_config(
-    page_title="Tackyon AI",
-    page_icon="logo.png",
-    layout="centered"
-)
+# --- 1. SETUP ---
+# Ensure your key is still set correctly in Streamlit Cloud Secrets
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+genai.configure(api_key=GOOGLE_API_KEY)
 
-# --- 2. API SETUP ---
-# This uses your existing secret key from Streamlit Cloud
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+# --- 2. THIRUKKURAL ---
+if 'kural' not in st.session_state:
+    kurals = [
+        "அகர முதல எழுத்தெல்லாம் ஆதி\nபகவன் முதற்றே உலகு.",
+        "கற்க கசடறக் கற்பவை கற்றபின்\nநிற்க அதற்குத் தக.",
+        "எண்ணென்ப ஏனை எழுத்தென்ப இவ்விரண்டும்\nகண்ணென்ப வாழும் உயிர்க்கு.",
+        "தொட்டனைத் தூறும் மணற்கேணி மாந்தர்க்குக்\nகற்றனைத் தூறும் அறிவு."
+    ]
+    st.session_state.kural = random.choice(kurals)
 
-# --- 3. LOGO & BRANDING ---
-if os.path.exists('logo.png'):
-    logo = Image.open('logo.png')
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image(logo, use_container_width=True)
-else:
-    st.title("Tackyon Summariser AI 🚀")
-
+# --- 3. UI BRANDING ---
+st.title("Tackyon 🚀")
 st.subheader("AI YouTube Summariser")
+st.caption(f"✨ *{st.session_state.kural}*")
 st.markdown("---")
 
 # --- 4. USER INPUT ---
-url = st.text_input("Paste YouTube Link here:", placeholder="https://www.youtube.com/watch?v=...")
-lang = st.selectbox("Select summary language:", ["English", "Tamil", "Hindi", "Malayalam"])
+target_lang = st.selectbox(
+    "Select summary language:",
+    ["English", "Tamil", "Hindi"]
+)
 
-# --- 5. THE BRAIN (GEMINI 3 FIX) ---
+youtube_link = st.text_input("Paste YouTube link here:")
+
+# --- 5. THE BRAIN ---
 if st.button("Summarize Video"):
-    if url:
-        with st.spinner("Tackyon is analyzing the video..."):
-            try:
-                # Get transcript using your bulletproof engine
-                text = yt_dlp_transcript(url)
-                
-                if text:
-                    # UPDATED: Using Gemini 3 Flash to fix the 404 error
-                    model = genai.GenerativeModel('gemini-3-flash') 
-                    
-                    prompt = f"Summarize this YouTube video transcript in {lang} with key highlights: {text}"
-                    response = model.generate_content(prompt)
-                    
-                    st.success("Summary Ready!")
-                    st.write(response.text)
-                else:
-                    st.error("Could not find a transcript for this video.")
+    if youtube_link:
+        try:
+            # Extract Video ID
+            if "v=" in youtube_link:
+                video_id = youtube_link.split("v=")[1].split("&")[0]
+            else:
+                video_id = youtube_link.split("/")[-1]
             
-            except Exception as e:
-                st.error(f"Something went wrong: {e}")
+            with st.spinner("Tackyon is reading the video..."):
+                # Get Transcript using the API that worked yesterday
+                transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                full_text = " ".join([i['text'] for i in transcript])
+                
+                # Use the Model that was successful yesterday
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                prompt = f"Summarize this YouTube video transcript in {target_lang} with key highlights: {full_text}"
+                response = model.generate_content(prompt)
+                
+                st.success("Summary Ready!")
+                st.write(response.text)
+                
+        except Exception as e:
+            st.error(f"Something went wrong: {e}")
     else:
         st.warning("Please paste a link first!")
