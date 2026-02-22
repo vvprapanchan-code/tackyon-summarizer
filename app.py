@@ -42,7 +42,7 @@ if st.button("Summarize"):
                     st.error("No transcript found for this video.")
                 else:
                     # FIX: Using 'gemini-1.5-flash-latest' to bypass the 404 error
-                    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                    model = genai.GenerativeModel('gemini-3-flash')
                     
                     response = model.generate_content(f"Summarize in {lang}: {text}")
                     
