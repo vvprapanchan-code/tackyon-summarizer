@@ -40,3 +40,24 @@ if st.button("Summarize"):
                 st.error(f"Error: {str(e)}")
     else:
         st.warning("Please provide both a YouTube link and a language!")
+        import streamlit.components.v1 as components # Make sure this is at the top of your file
+
+# --- ADMOB BANNER SECTION ---
+st.markdown("---") 
+st.write("Advertisement")
+
+# Displaying your real Banner Ad
+components.html(
+    f"""
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
+     crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+     style="display:inline-block;width:320px;height:50px"
+     data-ad-client="ca-app-pub-3510846848926159"
+     data-ad-slot="1148139407"></ins>
+    <script>
+     (adsbygoogle = window.adsbygoogle || []).push({{}});
+    </script>
+    """,
+    height=100,
+)
