@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components  # FIXED: Moved to the top
+import streamlit.components.v1 as components
 from yt_dlp_transcript import yt_dlp_transcript
 import google.generativeai as genai
 
@@ -22,23 +22,35 @@ if st.button("Summarize"):
     if url and lang:
         with st.spinner(f"Tackyon is working..."):
             try:
+                # Engine that bypasses blocks
                 text = yt_dlp_transcript(url)
-                if not text:
-                    st.error("No transcript found for this video.")
-                else:
+                
+                if text:
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     response = model.generate_content(f"Summarize this in {lang}: {text}")
-                    st.success(f"Victory! Summary in {lang} below:")
+                    st.success(f"Tackyon Victory! Summary in {lang} below:")
                     st.write(response.text)
+                else:
+                    # SMART TACKYON LOGIC
+                    if "shorts" in url.lower():
+                        st.warning("Tackyon AI can't summarize this Short because it's too brief or has no dialogue. Please give Tackyon a longer video!")
+                    else:
+                        st.info("Tackyon AI can't find a transcript for this video. It might be a Music Video or have poor audio quality. Please try a video with Subtitles (CC).")
+            
             except Exception as e:
-                st.error(f"Error: {str(e)}")
+                # Tackyon friendly error messages
+                if "sign in" in str(e).lower() or "confirm your age" in str(e).lower():
+                    st.error("Tackyon AI cannot access this video because it is Private or Age-Restricted.")
+                else:
+                    st.error(f"Tackyon encountered an issue: {str(e)}")
     else:
-        st.warning("Please provide both a YouTube link and a language!")
+        st.warning("Please provide both a YouTube link and a language for Tackyon!")
 
-# --- 3. ADMOB BANNER SECTION ---
+# --- 3. SAFE ADMOB TEST SECTION ---
 st.markdown("---") 
-st.write("Advertisement")
+st.write("Development Mode: Safety Test Ad")
 
+# USING GOOGLE TEST ID: ca-app-pub-3940256099942544/6300978111
 components.html(
     f"""
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
@@ -46,7 +58,7 @@ components.html(
     <ins class="adsbygoogle"
      style="display:inline-block;width:320px;height:50px"
      data-ad-client="ca-app-pub-3510846848926159"
-     data-ad-slot="1148139407"></ins>
+     data-ad-slot="6300978111"></ins> 
     <script>
      (adsbygoogle = window.adsbygoogle || []).push({{}});
     </script>
