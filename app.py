@@ -5,7 +5,6 @@ import google.generativeai as genai
 import yt_dlp
 
 # --- 1. SETUP ---
-# Using your confirmed stable model: gemini-2.5-flash
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
 st.set_page_config(page_title="Tackyon AI", page_icon="🚀")
@@ -19,69 +18,61 @@ lang_choice = st.selectbox("Select Language Method:", ["Common Languages", "Type
 if lang_choice == "Common Languages":
     lang = st.selectbox("Choose Language:", ["English", "Tamil", "Hindi", "Malayalam", "Telugu", "Kannada"])
 else:
-    lang = st.text_input("Type any language in the world (e.g., Japanese, Arabic):")
+    lang = st.text_input("Type any language in the world:")
 
-# --- 3. MAIN LOGIC ---
+# --- 3. MAIN LOGIC (FIXED TO AVOID RED ERRORS) ---
 if st.button("Summarize"):
     if url and lang:
-        with st.spinner(f"Tackyon is analyzing the video..."):
+        with st.spinner(f"Tackyon is analyzing..."):
             try:
-                # Get Video Details (Metadata) first
-                video_title = "Unknown Title"
-                uploader = "Unknown Creator"
-                
-                with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+                # STEP A: Get Details First
+                with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
                     info = ydl.extract_info(url, download=False)
-                    video_title = info.get('title', 'Video')
+                    title = info.get('title', 'Video')
                     uploader = info.get('uploader', 'Creator')
 
-                # Try to get the Transcript (Manual or Auto)
-                text = yt_dlp_transcript(url)
-                
+                # STEP B: Try for Transcript
+                try:
+                    text = yt_dlp_transcript(url)
+                except:
+                    text = None # This prevents the "cannot download subtitles" red box
+
                 if text:
-                    # SITUATION 1 & 2: Full Summary with Points
+                    # SUCCESS: Detailed Summary
                     model = genai.GenerativeModel('gemini-2.5-flash')
-                    prompt = f"Provide a detailed summary of this video in {lang}. Use clear bullet points and bold headings. Video content: {text}"
+                    prompt = f"Provide a detailed summary of this video in {lang} with bullet points. Content: {text}"
                     response = model.generate_content(prompt)
-                    
-                    st.success(f"Tackyon Victory! Here is your summary for '{video_title}':")
+                    st.success(f"Tackyon Victory! Summary for '{title}':")
                     st.write(response.text)
-                
                 else:
-                    # SITUATION 3 & 4: Music or Missing Transcripts
-                    st.info(f"Tackyon AI found the details: **{video_title}** by **{uploader}**")
-                    
+                    # FRIENDLY FALLBACK (Blue/Yellow Boxes)
+                    st.info(f"Tackyon AI identified: **{title}** by **{uploader}**")
                     if "shorts" in url.lower():
-                        st.warning("Tackyon AI found this Short, but it is too brief or has no dialogue to summarize. Please try a longer video!")
+                        st.warning("Tackyon AI cannot summarize this Short because it is too brief. Try a longer video!")
                     else:
-                        st.warning("Tackyon AI can't access a transcript for this video. This usually happens if it is a Music Video or if the audio quality is not clear enough for YouTube to generate text.")
+                        st.warning("Tackyon AI cannot access a transcript for this video. This usually happens with Music, poor audio, or if the video is very new.")
 
             except Exception as e:
-                # Handling Restricted/Private Videos
-                error_msg = str(e).lower()
-                if "sign in" in error_msg or "confirm your age" in error_msg:
-                    st.error("Tackyon AI cannot access this video because it is Private or Age-Restricted.")
+                # Catching Age Restrictions & Private Videos
+                error_str = str(e).lower()
+                if "sign in" in error_str or "age" in error_str:
+                    st.info(f"Tackyon AI cannot access this video because it is Private or Age-Restricted.")
                 else:
-                    st.error(f"Tackyon AI encountered an issue: {str(e)}")
+                    st.info(f"Tackyon AI is currently unable to process this specific link. Please try another one!")
+
     else:
-        st.warning("Please provide both a YouTube link and a language for Tackyon!")
+        st.warning("Please provide a link and language for Tackyon!")
 
 # --- 4. SAFE ADMOB TEST SECTION ---
 st.markdown("---") 
 st.write("Development Mode: Safety Test Ad")
-
-# USING GOOGLE TEST ID FOR SAFETY: ca-app-pub-3940256099942544/6300978111
 components.html(
     f"""
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
      crossorigin="anonymous"></script>
-    <ins class="adsbygoogle"
-     style="display:inline-block;width:320px;height:50px"
-     data-ad-client="ca-app-pub-3510846848926159"
-     data-ad-slot="6300978111"></ins> 
-    <script>
-     (adsbygoogle = window.adsbygoogle || []).push({{}});
-    </script>
+    <ins class="adsbygoogle" style="display:inline-block;width:320px;height:50px"
+     data-ad-client="ca-app-pub-3510846848926159" data-ad-slot="6300978111"></ins> 
+    <script>(adsbygoogle = window.adsbygoogle || []).push({{}});</script>
     """,
     height=100,
 )
