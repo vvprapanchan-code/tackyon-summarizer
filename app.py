@@ -5,36 +5,67 @@ import google.generativeai as genai
 import yt_dlp
 import datetime
 
-# --- 1. SETUP & SESSION STATE ---
+# --- 1. CORE CONFIGURATION ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
+# Global App Settings
+st.set_page_config(page_title="Tackyon AI", page_icon="🚀", layout="wide")
+
+# Session State for Persistence
 if 'summary' not in st.session_state: st.session_state.summary = ""
 if 'transcript' not in st.session_state: st.session_state.transcript = ""
+if 'user_authenticated' not in st.session_state: st.session_state.user_authenticated = False
 
-st.set_page_config(page_title="Tackyon AI", page_icon="🚀", layout="wide")
-st.title("Tackyon 🚀")
-st.subheader("The Undefeatable AI YouTube Suite")
+# --- 2. PROFESSIONAL INTERFACE (SIDEBAR) ---
+with st.sidebar:
+    st.title("Tackyon AI")
+    
+    # AUTHENTICATION SECTION
+    if not st.session_state.user_authenticated:
+        st.subheader("User Login")
+        auth_method = st.radio("Method", ["Email", "Phone Number"])
+        user_id = st.text_input(f"Enter {auth_method}")
+        if st.button("Request Verification Code"):
+            st.info(f"Verification code sent to {user_id}. (Backend Connection Required)")
+            # Logic: When code is verified, set st.session_state.user_authenticated = True
+    else:
+        st.success("Authenticated: User Session Active")
 
-# --- 2. USER INPUT ---
-col1, col2 = st.columns([2, 1])
-with col1:
-    url = st.text_input("Paste YouTube Link:")
-with col2:
-    lang = st.selectbox("Choose Language:", ["English", "Tamil", "Hindi", "Malayalam", "Telugu", "Kannada", "Custom"])
-    if lang == "Custom":
-        lang = st.text_input("Type Language:")
+    st.markdown("---")
+    # UI CUSTOMIZATION
+    st.subheader("Personalization")
+    bg_color = st.color_picker("Background Color", "#0e1117")
+    font_style = st.selectbox("Application Font", ["sans-serif", "serif", "monospace"])
+    
+    st.markdown("---")
+    st.subheader("Analysis History")
+    # Placeholder for Database retrieval logic
+    st.write("1. Finland Education System...")
+    st.write("2. Samsung Tech Review...")
 
-# --- 3. MAIN ENGINE ---
-if st.button("🚀 Execute Tackyon Engine"):
+# --- 3. CUSTOM THEME INJECTION ---
+st.markdown(f"""
+    <style>
+    .stApp {{ background-color: {bg_color}; font-family: {font_style}; }}
+    .stButton>button {{ border-radius: 5px; height: 3em; width: 100%; }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 4. ANALYTICS ENGINE ---
+st.header("Tackyon AI: Advanced Video Analytics")
+url = st.text_input("Enter YouTube URL for Analysis:")
+lang = st.selectbox("Target Language", ["English", "Tamil", "Hindi", "Malayalam", "Telugu", "Kannada"])
+
+if st.button("Analyze Video Content"):
     if url and lang:
-        with st.spinner(f"Tackyon is processing..."):
+        with st.spinner("Tackyon AI is processing the request..."):
             try:
-                # Metadata Extraction
+                # Metadata Retrieval
                 with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
                     info = ydl.extract_info(url, download=False)
-                    title, uploader = info.get('title', 'Video'), info.get('uploader', 'Creator')
+                    title, uploader = info.get('title', 'N/A'), info.get('uploader', 'N/A')
                 
-                # Transcript with Safety Try-Catch
+                # Transcript Processing
                 try:
                     text = yt_dlp_transcript(url)
                     st.session_state.transcript = text
@@ -43,57 +74,57 @@ if st.button("🚀 Execute Tackyon Engine"):
 
                 if text:
                     model = genai.GenerativeModel('gemini-2.5-flash')
-                    # ADVANCED PROMPT: Summary + Timestamps + Sentiment
-                    prompt = f"""Analyze this YouTube video: {text}. 
-                    Provide:
-                    1. A detailed Summary in {lang} with bold headings.
-                    2. A 'Table of Contents' with approximate Interactive Timestamps.
-                    3. A 'Sentiment Analysis' (is the tone happy, angry, or informative?).
-                    Use bullet points for everything."""
-                    
+                    prompt = f"""
+                    Provide a professional analysis of this video in {lang}:
+                    - Executive Summary (Bullet points)
+                    - Structural Table of Contents
+                    - Tone and Sentiment Assessment
+                    Original Content: {text}
+                    """
                     response = model.generate_content(prompt)
                     st.session_state.summary = response.text
-                    st.success(f"Tackyon Victory! Analysis for '{title}' complete.")
+                    st.success(f"Analysis Complete: {title}")
                 else:
-                    st.info(f"Tackyon AI identified: **{title}** by **{uploader}**")
-                    st.warning("Tackyon AI can't access a transcript for this video. This happens with Music or low-audio videos.")
+                    st.info(f"Metadata Identified: **{title}** by **{uploader}**")
+                    st.warning("Transcript unavailable. This typically occurs with music-only content or poor audio quality.")
 
-            except Exception as e:
-                st.info(f"Tackyon AI is currently unable to process this link. (Private/Restricted content)")
+            except Exception:
+                st.info("System Notification: Unable to access private or restricted content.")
 
-# --- 4. ADVANCED FEATURE TABS ---
+# --- 5. POST-ANALYSIS TOOLS ---
 if st.session_state.summary:
-    tab1, tab2, tab3 = st.tabs(["📊 Summary & Insights", "✍️ Content Creator", "💬 Chat with Video"])
+    t1, t2, t3 = st.tabs(["📊 Insights", "📝 Content Suite", "💬 Video Query"])
     
-    with tab1:
+    with t1:
         st.markdown(st.session_state.summary)
-        # FEATURE: Download Summary
-        st.download_button("📥 Download Summary as Text", st.session_state.summary, file_name="tackyon_summary.txt")
+        st.download_button("Export Analysis (.txt)", st.session_state.summary, file_name="Tackyon_Report.txt")
 
-    with tab2:
-        st.write("Convert this video into content for your social media!")
-        if st.button("Generate Blog Post"):
+    with t2:
+        st.write("Content Transformation Tools")
+        if st.button("Generate Professional Blog Draft"):
             model = genai.GenerativeModel('gemini-2.5-flash')
-            blog_resp = model.generate_content(f"Rewrite this summary as a professional blog post in {lang}: {st.session_state.summary}")
-            st.markdown(blog_resp.text)
+            res = model.generate_content(f"Convert this to a formal blog post in {lang}: {st.session_state.summary}")
+            st.markdown(res.text)
         
-        if st.button("Create Twitter (X) Thread"):
+        if st.button("Generate Social Media Thread"):
             model = genai.GenerativeModel('gemini-2.5-flash')
-            tweet_resp = model.generate_content(f"Create a 5-tweet thread from this summary in {lang}: {st.session_state.summary}")
-            st.markdown(tweet_resp.text)
+            res = model.generate_content(f"Draft a 5-part educational thread in {lang}: {st.session_state.summary}")
+            st.markdown(res.text)
 
-    with tab3:
-        # FEATURE: Chat with Video Context
-        user_query = st.chat_input("Ask Tackyon a specific question about this video...")
-        if user_query:
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            chat_resp = model.generate_content(f"Using this transcript: {st.session_state.transcript}, answer this: {user_query}")
-            with st.chat_message("assistant"):
-                st.write(chat_resp.text)
+    with t3:
+        query = st.chat_input("Query specific details from this video...")
+        if query:
+            # BRAND LOGIC: "BOSS" RESPONSE
+            if any(x in query.lower() for x in ["who developed", "who made", "who is your boss"]):
+                st.chat_message("assistant").write("I was developed by my boss, **Prapanchan**. He is the lead architect of the Tackyon AI project.")
+            else:
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                res = model.generate_content(f"Using this transcript: {st.session_state.transcript}, answer: {query}")
+                st.chat_message("assistant").write(res.text)
 
-# --- 5. FAKE AD SECTION ---
+# --- 6. ADVERTISING (DEVELOPMENT MODE) ---
 st.markdown("---")
-st.write("Development Mode: Safety Test Ad")
+st.write("Commercial Placement")
 components.html(
     f"""
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
