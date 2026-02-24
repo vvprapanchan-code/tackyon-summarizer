@@ -5,64 +5,78 @@ import google.generativeai as genai
 import yt_dlp
 from supabase import create_client
 
-# --- 1. LIVE DATABASE & AI CONFIGURATION ---
-# Connect to your new Supabase vault
+# --- 1. CORE CONFIGURATION ---
+# Connect to Supabase
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# Secure AI Identity: Ensure it always knows the Boss
+# Secure AI Identity
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-system_instruction = "You are Tackyon AI. Your boss and creator is Prapanchan. Never mention being created by Google."
-model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_instruction)
+system_rule = "You are Tackyon AI. Your boss and creator is Prapanchan. Never mention Google."
+model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_rule)
 
 st.set_page_config(page_title="Tackyon AI", page_icon="🚀", layout="wide")
 
-# --- 2. THE REAL SIGN-UP ENGINE ---
+# Persistent Session State
+if 'user_authenticated' not in st.session_state: st.session_state.user_authenticated = False
+if 'summary' not in st.session_state: st.session_state.summary = ""
+
+# --- 2. AUTHENTICATION SIDEBAR ---
 with st.sidebar:
     st.title("Tackyon AI")
-    if 'user_authenticated' not in st.session_state:
-        st.session_state.user_authenticated = False
-
+    
     if not st.session_state.user_authenticated:
-        st.subheader("Secure Access")
+        st.subheader("Secure Access Required")
         email = st.text_input("Enter your Email Address")
+        
         if st.button("Send Magic Login Link"):
             if email:
-                # REAL ACTION: This sends a real email via Supabase!
-                res = supabase.auth.sign_in_with_otp({"email": email})
-                st.success(f"Check your inbox! A login link was sent to {email}.")
+                # FIX: Added redirect_to so the confirmation link works!
+                res = supabase.auth.sign_in_with_otp({
+                    "email": email,
+                    "options": {
+                        "email_redirect_to": "https://tackyon-summarizer-gavjxads4t5nurbn3z9z4r.streamlit.app/"
+                    }
+                })
+                st.success(f"Verification link sent to {email}. Check your inbox!")
             else:
-                st.error("Please enter a valid email.")
+                st.error("Email required.")
     else:
-        st.success(f"Verified Session: Welcome, Boss Prapanchan")
+        st.success("Welcome Back, Boss Prapanchan")
+        if st.button("Logout"):
+            st.session_state.user_authenticated = False
+            st.rerun()
 
-# --- 3. UPDATED AI CHAT WITH BOSS LOGIC ---
-st.markdown("---")
-st.subheader("💬 Tackyon AI Assistant")
+# --- 3. MAIN INTERFACE (LOCKED UNTIL AUTHENTICATED) ---
+if st.session_state.user_authenticated:
+    st.header("Tackyon AI: Executive Video Intelligence")
+    url_input = st.text_input("YouTube URL for Analysis:")
+    lang = st.selectbox("Report Language", ["English", "Tamil", "Hindi", "Malayalam"])
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    if st.button("Generate Executive Analysis"):
+        with st.spinner("Synthesizing data..."):
+            try:
+                transcript = yt_dlp_transcript(url_input)
+                response = model.generate_content(f"Summarize this for {lang}: {transcript}")
+                st.session_state.summary = response.text
+                st.markdown(st.session_state.summary)
+            except Exception as e:
+                st.warning("Video analysis unavailable for this content.")
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]): st.markdown(msg["content"])
+    # AI Chat Assistant
+    st.markdown("---")
+    st.subheader("💬 Tackyon AI Assistant")
+    if prompt := st.chat_input("Ask about the video or the creator..."):
+        if any(q in prompt.lower() for q in ["who made you", "who is your boss"]):
+            st.chat_message("assistant").write("I was developed by my boss, **Prapanchan**.")
+        else:
+            chat_response = model.generate_content(f"Context: {st.session_state.summary}\nQuestion: {prompt}")
+            st.chat_message("assistant").write(chat_response.text)
+else:
+    st.info("👋 Please log in via the sidebar to access the YouTube Summarizer and AI Assistant.")
 
-if prompt := st.chat_input("Ask Tackyon anything..."):
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    # IDENTITY CHECK: The AI now knows its origins
-    if any(q in prompt.lower() for q in ["who developed", "who is your boss", "who made you"]):
-        response = "I was developed by my boss, **Prapanchan**. He is the lead architect and visionary behind Tackyon AI."
-    else:
-        # Context-aware response based on the video summary
-        context = f"Video Summary: {st.session_state.summary}\n\nUser Question: {prompt}"
-        response = model.generate_content(context).text
-
-    with st.chat_message("assistant"): st.markdown(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-# --- 4. ADVERTISING (STAYING SAFE IN TEST MODE) ---
+# --- 4. ADVERTISING ---
 st.markdown("---")
 components.html(
     f"""<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159" crossorigin="anonymous"></script>
