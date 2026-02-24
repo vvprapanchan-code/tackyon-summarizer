@@ -2,3 +2,4 @@ streamlit
 youtube-transcript-api
 google-generativeai
 yt-dlp-transcript
+supabase
