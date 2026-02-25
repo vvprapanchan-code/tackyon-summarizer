@@ -2,11 +2,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 from yt_dlp_transcript import yt_dlp_transcript
 import google.generativeai as genai
-import yt_dlp
 from supabase import create_client
 
 # --- 1. CORE CONFIGURATION ---
-# Connect to Supabase
+# These must be in your Streamlit Secrets
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
@@ -19,8 +18,10 @@ model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_rule
 st.set_page_config(page_title="Tackyon AI", page_icon="🚀", layout="wide")
 
 # Persistent Session State
-if 'user_authenticated' not in st.session_state: st.session_state.user_authenticated = False
-if 'summary' not in st.session_state: st.session_state.summary = ""
+if 'user_authenticated' not in st.session_state:
+    st.session_state.user_authenticated = False
+if 'summary' not in st.session_state:
+    st.session_state.summary = ""
 
 # --- 2. AUTHENTICATION SIDEBAR ---
 with st.sidebar:
@@ -29,21 +30,25 @@ with st.sidebar:
     if not st.session_state.user_authenticated:
         st.subheader("Secure Access Required")
         email = st.text_input("Enter your Email Address")
+        # BOSS BACKDOOR: Type 'boss' here to bypass email limits
+        dev_code = st.text_input("Developer Code (Optional)", type="password")
         
-        if st.button("Send Magic Login Link"):
-            if email:
-                # FIX: Added redirect_to so the confirmation link works!
-                res = supabase.auth.sign_in_with_otp({
-                    "email": email,
-                    "options": {
-                        "email_redirect_to": "https://tackyon-summarizer-gavjxads4t5nurbn3z9z4r.streamlit.app/"
-                    }
-                })
-                st.success(f"Verification link sent to {email}. Check your inbox!")
+        if st.button("Login"):
+            if dev_code == "boss":
+                st.session_state.user_authenticated = True
+                st.success("Developer Mode Active: Welcome, Boss Prapanchan")
+                st.rerun()
+            elif email:
+                try:
+                    # FIX: We removed the manual 'redirect_to' to match your dashboard
+                    res = supabase.auth.sign_in_with_otp({"email": email})
+                    st.success(f"Verification link sent to {email}. Check your inbox!")
+                except Exception as e:
+                    st.error("Email limit reached. Use the Developer Code 'boss' to continue.")
             else:
                 st.error("Email required.")
     else:
-        st.success("Welcome Back, Boss Prapanchan")
+        st.success("Verified Session: Welcome, Boss Prapanchan")
         if st.button("Logout"):
             st.session_state.user_authenticated = False
             st.rerun()
@@ -74,7 +79,7 @@ if st.session_state.user_authenticated:
             chat_response = model.generate_content(f"Context: {st.session_state.summary}\nQuestion: {prompt}")
             st.chat_message("assistant").write(chat_response.text)
 else:
-    st.info("👋 Please log in via the sidebar to access the YouTube Summarizer and AI Assistant.")
+    st.info("👋 Welcome to Tackyon AI. Please log in via the sidebar to unlock the Video Summarizer.")
 
 # --- 4. ADVERTISING ---
 st.markdown("---")
