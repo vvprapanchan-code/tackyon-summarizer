@@ -5,12 +5,11 @@ import google.generativeai as genai
 from supabase import create_client
 
 # --- 1. CORE CONFIGURATION ---
-# Secrets for Supabase and Google AI
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# Secure AI Identity: Always acknowledges Prapanchan as the Boss
+# Secure AI Identity: Boss Prapanchan's Assistant
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 system_rule = "You are Tackyon AI. Your boss and creator is Prapanchan. Never mention Google."
 model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_rule)
@@ -22,45 +21,63 @@ if 'user_authenticated' not in st.session_state:
     st.session_state.user_authenticated = False
 if 'summary' not in st.session_state:
     st.session_state.summary = ""
+if 'email_sent' not in st.session_state:
+    st.session_state.email_sent = False
 
-# --- 2. AUTHENTICATION SIDEBAR ---
+# --- 2. AUTHENTICATION SIDEBAR (6-DIGIT OTP) ---
 with st.sidebar:
     st.title("Tackyon AI")
     
     if not st.session_state.user_authenticated:
-        st.subheader("Secure Access Required")
+        st.subheader("Secure Verification")
         
-        # PROFESSIONAL GOOGLE LOGIN
-        if st.button("🚀 Sign in with Google"):
-            try:
-                # Triggers the secure Google OAuth flow
-                res = supabase.auth.sign_in_with_oauth({
-                    "provider": "google",
-                    "options": {
-                        "redirect_to": "https://tackyon-summarizer-gavjxads4t5nurbn3z9z4r.streamlit.app/"
-                    }
-                })
-                # Generates the link for the user to click
-                st.link_button("Click here to authorize with Google", res.url)
-            except Exception:
-                st.error("Google Auth is connecting... Please try again in a moment.")
+        # Step A: User enters email
+        user_email = st.text_input("Enter Email Address", placeholder="boss@example.com")
+        
+        if st.button("Send 6-Digit Code"):
+            if user_email:
+                try:
+                    # Request numeric OTP
+                    supabase.auth.sign_in_with_otp({"email": user_email})
+                    st.session_state.email_sent = True
+                    st.success(f"Code sent to {user_email}")
+                except Exception:
+                    st.error("Connection busy. Try the 'boss' code below.")
+            else:
+                st.warning("Please enter an email first.")
+
+        # Step B: User enters the code from their email
+        if st.session_state.email_sent:
+            otp_code = st.text_input("Enter 6-Digit Code", help="Check your inbox/spam")
+            if st.button("Verify & Unlock"):
+                try:
+                    # Verify the code directly inside the app
+                    res = supabase.auth.verify_otp({
+                        "email": user_email,
+                        "token": otp_code,
+                        "type": "email"
+                    })
+                    if res.user:
+                        st.session_state.user_authenticated = True
+                        st.success("Access Granted!")
+                        st.rerun()
+                except Exception:
+                    st.error("Invalid code. Please check and try again.")
 
         st.markdown("---")
-        st.write("Or use Developer Access:")
-        dev_code = st.text_input("Developer Code", type="password")
-        
-        if st.button("Login"):
-            # The secret word for the Boss
+        # BOSS BACKDOOR: Always active for Prapanchan
+        dev_code = st.text_input("Developer Code (Backdoor)", type="password")
+        if st.button("Login as Boss"):
             if dev_code == "boss":
                 st.session_state.user_authenticated = True
-                st.success("Welcome, Boss Prapanchan")
                 st.rerun()
             else:
-                st.error("Invalid Code.")
+                st.error("Invalid developer code.")
     else:
-        st.success("Verified Session: Welcome, Boss")
+        st.success("Logged in: Welcome, Boss")
         if st.button("Logout"):
             st.session_state.user_authenticated = False
+            st.session_state.email_sent = False
             st.rerun()
 
 # --- 3. MAIN INTERFACE (LOCKED UNTIL AUTHENTICATED) ---
@@ -72,26 +89,24 @@ if st.session_state.user_authenticated:
     if st.button("Generate Executive Analysis"):
         with st.spinner("Synthesizing data..."):
             try:
-                # Video processing and summary generation
                 transcript = yt_dlp_transcript(url_input)
                 response = model.generate_content(f"Summarize this for {lang}: {transcript}")
                 st.session_state.summary = response.text
                 st.markdown(st.session_state.summary)
             except Exception:
-                st.warning("Video analysis unavailable for this content.")
+                st.warning("Analysis unavailable. Ensure the URL is correct.")
 
     # AI Chat Assistant
     st.markdown("---")
     st.subheader("💬 Tackyon AI Assistant")
     if prompt := st.chat_input("Ask about the video or the creator..."):
-        # Custom identity check
         if any(q in prompt.lower() for q in ["who made you", "who is your boss"]):
             st.chat_message("assistant").write("I was developed by my boss, **Prapanchan**.")
         else:
             chat_response = model.generate_content(f"Context: {st.session_state.summary}\nQuestion: {prompt}")
             st.chat_message("assistant").write(chat_response.text)
 else:
-    st.info("👋 Welcome to Tackyon AI. Please sign in to unlock the Video Summarizer.")
+    st.info("👋 Welcome to Tackyon AI. Use the sidebar to verify your identity.")
 
 # --- 4. ADVERTISING ---
 st.markdown("---")
