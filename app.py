@@ -5,44 +5,39 @@ import google.generativeai as genai
 from supabase import create_client
 
 # --- 1. CORE CONFIGURATION ---
+# Ensure these keys are in your .streamlit/secrets.toml
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# Secure AI Identity
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-system_rule = "You are Tackyon AI. Your boss and creator is Prapanchan. Never mention Google."
+system_rule = "You are Tackyon AI. Your boss and creator is Prapanchan."
 model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_rule)
 
 st.set_page_config(page_title="Tackyon AI", page_icon="🚀", layout="wide")
 
 # --- 2. DATABASE FUNCTIONS ---
 def save_to_history(video_url, summary, lang):
-    """Saves the generated summary to the database"""
-    user = supabase.auth.get_user()
-    if user.user:
-        data = {
-            "user_id": user.user.id,
-            "video_url": video_url,
-            "summary_text": summary,
-            "language": lang
-        }
+    try:
+        user_res = supabase.auth.get_user()
+        # Handle both real user login and 'boss' backdoor login
+        uid = user_res.user.id if user_res and user_res.user else None
+        data = {"user_id": uid, "video_url": video_url, "summary_text": summary, "language": lang}
         supabase.table("summaries").insert(data).execute()
+    except Exception:
+        pass
 
 def load_history():
-    """Displays the last 10 summaries in the sidebar"""
     st.sidebar.markdown("---")
     st.sidebar.subheader("📜 Your Video History")
-    user = supabase.auth.get_user()
-    if user.user:
-        try:
-            res = supabase.table("summaries").select("*").order("created_at", desc=True).limit(10).execute()
+    try:
+        res = supabase.table("summaries").select("*").order("created_at", desc=True).limit(10).execute()
+        if res.data:
             for item in res.data:
-                # Clicking a history item loads it into the main view
-                if st.sidebar.button(f"📺 {item['video_url'][:25]}...", key=item['id']):
+                if st.sidebar.button(f"📺 {item['video_url'][:20]}...", key=item['id']):
                     st.session_state.summary = item['summary_text']
-        except Exception:
-            st.sidebar.write("No history found yet.")
+    except Exception:
+        st.sidebar.write("History currently unavailable.")
 
 # --- 3. SESSION STATE ---
 if 'user_authenticated' not in st.session_state:
@@ -55,11 +50,9 @@ if 'email_sent' not in st.session_state:
 # --- 4. AUTHENTICATION SIDEBAR ---
 with st.sidebar:
     st.title("Tackyon AI")
-    
     if not st.session_state.user_authenticated:
         st.subheader("Secure Verification")
         user_email = st.text_input("Enter Email Address")
-        
         if st.button("Send 6-Digit Code"):
             if user_email:
                 supabase.auth.sign_in_with_otp({"email": user_email})
@@ -76,12 +69,15 @@ with st.sidebar:
         
         st.markdown("---")
         dev_code = st.text_input("Developer Code (Backdoor)", type="password")
-        if st.button("Login as Boss") and dev_code == "boss":
-            st.session_state.user_authenticated = True
-            st.rerun()
+        if st.button("Login as Boss"):
+            if dev_code == "boss":
+                st.session_state.user_authenticated = True
+                st.rerun()
+            else:
+                st.error("Invalid code.")
     else:
         st.success("Welcome, Boss Prapanchan")
-        load_history() # Show history once logged in
+        load_history()
         if st.button("Logout"):
             st.session_state.user_authenticated = False
             st.rerun()
@@ -98,9 +94,8 @@ if st.session_state.user_authenticated:
                 transcript = yt_dlp_transcript(url_input)
                 response = model.generate_content(f"Summarize this for {lang}: {transcript}")
                 st.session_state.summary = response.text
-                # Save to database immediately after generation
                 save_to_history(url_input, st.session_state.summary, lang)
-                st.rerun() # Refresh to show in history sidebar
+                st.rerun()
             except Exception:
                 st.warning("Could not process this video.")
 
