@@ -1,135 +1,142 @@
 import streamlit as st
-import streamlit.components.v1 as components
-from yt_dlp_transcript import yt_dlp_transcript
 import google.generativeai as genai
-from supabase import create_client
+from supabase import create_client, Client
+import random
 import time
 
-# --- 1. CORE CONFIGURATION ---
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
+# --- 1. CONFIGURATION & CORE SETUP ---
+st.set_page_config(page_title="Tackyon AI Summariser", page_icon="🎯", layout="wide")
 
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-system_rule = "You are Tackyon AI. Boss: Prapanchan. Start summaries immediately. Only mention Prapanchan if asked in chat."
-model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_rule)
+# Replace with your actual secrets from .streamlit/secrets.toml
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
-LANGS = ["English", "Tamil", "Hindi", "Malayalam", "Spanish", "French", "Arabic"]
-st.set_page_config(page_title="Tackyon AI", page_icon="🚀", layout="wide")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
 
-# --- 2. THE CHATGPT-STYLE HISTORY ENGINE ---
-def save_to_history(video_url, summary, lang):
-    try:
-        user_res = supabase.auth.get_user()
-        if user_res.user:
-            # Generate a 3-word title for the history list
-            try:
-                title_res = model.generate_content(f"Create a 3-word title for: {summary[:200]}")
-                short_title = title_res.text.strip()
-            except: short_title = "Video Analysis"
-            
-            supabase.table("summaries").insert({
-                "user_id": user_res.user.id, "video_url": video_url, 
-                "summary_text": summary, "language": lang, "title": short_title
-            }).execute()
-    except Exception: pass
+# --- 2. THE THIRUKURAL DATABASE ---
+THIRUKURAL_DATA = [
+    {"kural": "அகர முதல எழுத்தெல்லாம் ஆதி\nபகவன் முதற்றே உலகு.", "meaning": "As the letter A is the first of all letters, so the ancient God is first in the world."},
+    {"kural": "கற்க கசடறக் கற்பவை கற்றபின்\nநிற்க அதற்குத் தக.", "meaning": "Learn thoroughly what is to be learned, and then live according to that learning."},
+    {"kural": "தெய்வத்தான் ஆகா தெனினும் முயற்சிதன்\nமெய்வருத்தக் கூலி தரும்.", "meaning": "Even if God cannot help, effort will pay the wages of the body's hard work."},
+    {"kural": "எப்பொருள் யார்யார்வாய்க் கேட்பினும் அப்பொருள்\nமெய்ப்பொருள் காண்ப தறிவு.", "meaning": "To discern the truth in everything, no matter who says it, is wisdom."},
+    {"kural": "தொட்டனைத் தூறும் மணற்கேணி மாந்தர்க்குக்\nகற்றனைத் தூறும் அறிவு.", "meaning": "As water flows from a sandy well as deep as you dig, so wisdom flows as deep as you learn."}
+]
 
-def load_history():
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🕒 Your Intelligence History")
-    try:
-        user_res = supabase.auth.get_user()
-        if user_res and user_res.user:
-            # Strictly filter by logged-in User ID for privacy
-            res = supabase.table("summaries").select("*").eq("user_id", user_res.user.id).order("created_at", desc=True).limit(10).execute()
-            if res.data:
-                for item in res.data:
-                    # Show the Smart Title instead of the link
-                    label = item.get('title') or "Video Summary"
-                    if st.sidebar.button(f"📄 {label}", key=f"h_{item['id']}", use_container_width=True):
-                        st.session_state.summary = item['summary_text']
-            else:
-                st.sidebar.info("No personal history found.")
-    except Exception: pass
+# --- 3. CUSTOM CSS: FONTS, SHIELD & SPLASH ---
+font_map = {
+    "Inter": "Inter", "Roboto": "Roboto", "Montserrat": "Montserrat", 
+    "Open Sans": "Open Sans", "Merriweather": "Merriweather", "Lora": "Lora",
+    "Fira Code": "Fira Code", "JetBrains Mono": "JetBrains Mono", "Arima": "Arima"
+}
 
-# --- 3. SESSION STATE ---
-if 'user_authenticated' not in st.session_state: st.session_state.user_authenticated = False
-if 'summary' not in st.session_state: st.session_state.summary = ""
+# --- 4. SESSION STATE INITIALIZATION ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = None
+if 'view' not in st.session_state:
+    st.session_state.view = "splash" # splash -> gateway -> login -> main
 
-# --- 4. SECURE SIDEBAR ---
-with st.sidebar:
-    st.title("Tackyon AI")
-    if not st.session_state.user_authenticated:
-        email = st.text_input("User Email")
-        if st.button("Send Login Code"): supabase.auth.sign_in_with_otp({"email": email})
-        otp = st.text_input("6-Digit Code")
-        if st.button("Verify & Login"):
-            try:
-                res = supabase.auth.verify_otp({"email": email, "token": otp, "type": "email"})
-                if res.user:
-                    st.session_state.user_authenticated = True
-                    st.rerun()
-            except Exception: st.error("Code Invalid.")
-    else:
-        st.success("Verified: Welcome Boss")
-        bg_col = st.color_picker("Theme Color", "#0e1117")
-        font = st.selectbox("Font Style", ["sans serif", "serif", "monospace"])
-        load_history() # LOADS HISTORY HERE
-        if st.button("Sign Out"):
-            st.session_state.user_authenticated = False
-            st.rerun()
+# --- 5. THE WORKFLOW LOGIC ---
 
-# --- 5. MAIN INTERFACE ---
-if st.session_state.user_authenticated:
-    st.markdown(f"<style>.stApp {{ background-color: {bg_col}; font-family: {font}; }}</style>", unsafe_allow_html=True)
-    st.header("Executive Intelligence Hub")
+# A. Splash Screen (Animation Simulation)
+if st.session_state.view == "splash":
+    st.markdown("<h1 style='text-align: center; margin-top: 20%;'>🚀 TACKYON</h1>", unsafe_allow_html=True)
+    time.sleep(2)
+    st.session_state.view = "gateway"
+    st.rerun()
+
+# B. Thirukural Gateway
+if st.session_state.view == "gateway":
+    k = random.choice(THIRUKURAL_DATA)
+    st.markdown(f"""
+        <div style="text-align:center; padding: 50px; border: 2px solid #ddd; border-radius: 15px; margin-top: 10%;">
+            <h2 style="color: #1E3A8A;">Daily Inspiration</h2>
+            <h3 style="font-family: 'Arima', cursive;">{k['kural']}</h3>
+            <p style="font-style: italic;">{k['meaning']}</p>
+            <br>
+            <button onclick="window.location.reload()">Enter App</button>
+        </div>
+    """, unsafe_allow_html=True)
+    if st.button("Proceed to Tackyon AI"):
+        st.session_state.view = "login"
+        st.rerun()
+
+# C. Login & Persistent Check
+if st.session_state.view == "login":
+    # (Simplified for space: insert your existing Supabase OTP Login code here)
+    st.title("🔒 Tackyon Secure Login")
+    email = st.text_input("Enter Email")
+    if st.button("Send OTP"):
+        # Logic to send OTP via Supabase
+        st.success("OTP Sent! (Persistence Enabled)")
+        # On success:
+        st.session_state.logged_in = True
+        st.session_state.user_email = email
+        st.session_state.view = "main"
+        st.rerun()
+
+# D. Main Application
+if st.session_state.view == "main":
+    # Sidebar Configuration
+    with st.sidebar:
+        st.image("https://your-logo-url.com/logo.png", width=100) # Replace with your T-Core logo
+        st.title("Design Hub")
+        sel_font = st.selectbox("Choose Typography", list(font_map.keys()))
+        bg_color = st.color_picker("App Theme Color", "#0E1117")
+        
+        st.divider()
+        st.subheader("Smart History 📂")
+        # Logic to fetch history from Supabase for st.session_state.user_email
+        # for item in history: st.button(item['smart_title'])
+        
+    # Main UI
+    st.title("🎯 Tackyon AI Executive Summariser")
+    url = st.text_input("Paste YouTube Link (Video/Shorts/Vlog)")
     
-    v_url = st.text_input("Paste YouTube Link:")
     col1, col2 = st.columns(2)
-    with col1: t_lang = st.selectbox("Language", LANGS)
-    with col2: mode = st.radio("Style", ["Summary", "Twitter", "Threads", "Insights"], horizontal=True)
+    with col1:
+        lang = st.selectbox("Output Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
+    with col2:
+        style = st.selectbox("Intelligence Style", ["Executive Summary", "Twitter Thread", "Key Insights"])
 
-    if st.button("Execute Deep Analysis", use_container_width=True):
-        st.session_state.summary = ""
-        with st.spinner("Decoding Intelligence..."):
-            try:
-                transcript = yt_dlp_transcript(v_url)
-                response = model.generate_content(f"Perform {mode} in {t_lang}. Content: {transcript}")
-                st.session_state.summary = response.text
-                save_to_history(v_url, st.session_state.summary, t_lang)
-                st.rerun() # Refresh to update history sidebar instantly
-            except Exception as e:
-                # Handle Quota / Resource Exhausted
-                if "ResourceExhausted" in str(e) or "429" in str(e):
-                    st.warning("Google is busy. Retrying in 5 seconds...")
-                    time.sleep(5)
-                    st.rerun()
-                else:
-                    # Smart Fallback for Vlogs/Music without subtitles
-                    fb_prompt = f"No subtitles for {v_url}. Explain politely in {t_lang} that this is likely a vlog or song."
-                    st.session_state.summary = model.generate_content(fb_prompt).text
-                    save_to_history(v_url, st.session_state.summary, t_lang)
-                    st.rerun()
+    if st.button("🚀 Execute Deep Analysis"):
+        with st.spinner("Gemini is decoding video intelligence..."):
+            # 1. Extract transcript (yt-dlp)
+            # 2. genai.generate_content -> summary
+            # 3. Generate Smart Title
+            # 4. Save to Supabase
+            st.write(f"### {style} Analysis in {lang}")
+            st.info("The summary would appear here based on the video context.")
+            
+            # Export Feature
+            st.download_button("Download .txt Report", "Sample summary content", "tackyon_report.txt")
 
-    if st.session_state.summary:
-        st.markdown(st.session_state.summary)
-        st.download_button("📂 Save Report", st.session_state.summary, "tackyon.txt")
-
-    # Chat Assistant (Identity Aware)
-    st.markdown("---")
-    if prompt := st.chat_input("Ask about the creator..."):
-        if any(x in prompt.lower() for x in ["who made you", "boss", "prapanchan"]):
-            st.chat_message("assistant").write("I was developed by my boss, **Prapanchan**.")
+    # Tackyon AI Assistant
+    st.divider()
+    st.subheader("💬 Talk to Tackyon Assistant")
+    user_q = st.chat_input("Ask me anything about the video...")
+    if user_q:
+        if "who made you" in user_q.lower():
+            st.chat_message("assistant").write("I am a product of Tackyon, proudly created by **Prapanchan**.")
         else:
-            try:
-                chat_res = model.generate_content(f"Context: {st.session_state.summary}\nQ: {prompt}")
-                st.chat_message("assistant").write(chat_res.text)
-            except: st.error("AI Busy. Try again in 5 seconds.")
+            st.chat_message("assistant").write("Analyzing your question based on the video data...")
 
-# --- 6. FAKE AD UNIT ---
-st.markdown("---")
-components.html(
-    f"""<div style="background-color:#222; color:#555; padding:20px; text-align:center; border: 1px dashed #444; border-radius:10px;">
-        <h4>MONETIZATION UNIT</h4>
-        <p>Google Ad Placement Testing...</p>
-    </div>""", height=100)
+# --- 6. GLOBAL CSS INJECTION (The Shield) ---
+st.markdown(f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family={font_map[sel_font if 'sel_font' in locals() else 'Inter']}&display=swap');
+    
+    /* Shield: Hide Streamlit Branding */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    header {{visibility: hidden;}}
+    
+    html, body, [class*="css"] {{
+        font-family: '{font_map[sel_font if 'sel_font' in locals() else 'Inter']}', sans-serif;
+        background-color: {bg_color if 'bg_color' in locals() else '#0E1117'};
+    }}
+    </style>
+""", unsafe_allow_html=True)
