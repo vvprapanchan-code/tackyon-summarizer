@@ -1,4 +1,6 @@
 streamlit
 google-generativeai
+supabase
 gTTS
+yt-dlp
 youtube-transcript-api
