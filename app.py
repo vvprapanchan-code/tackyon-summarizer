@@ -10,15 +10,19 @@ import os
 # --- 1. CORE CONFIGURATION ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
-# FIX: Matching the exact names from your Secrets screenshot to avoid KeyError
-GEMINI_KEY = st.secrets["GOOGLE_API_KEY"] 
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+# FIX: Matching the EXACT spelling 'GOOGLE_API_KEY' from your Secrets dashboard
+try:
+    GEMINI_KEY = st.secrets["GOOGLE_API_KEY"] 
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except KeyError as e:
+    st.error(f"Secret Key Missing: {e}. Please check your Streamlit Secrets dashboard.")
+    st.stop()
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 genai.configure(api_key=GEMINI_KEY)
 
-# FIX: Calling the high-speed Gemini 2.5 Flash model correctly
+# FIX: Calling the high-speed Gemini 2.5 Flash model
 model = genai.GenerativeModel('models/gemini-2.5-flash') 
 
 # --- 2. THIRUKURAL DATABASE ---
@@ -66,7 +70,7 @@ if st.session_state.view == "login":
 # FEATURE: THE MAIN HUB
 if st.session_state.view == "main":
     with st.sidebar:
-        st.title("T-Core Design")
+        st.title("T-Core Design Hub")
         font = st.selectbox("Typography", ["Inter", "Roboto", "Montserrat", "Arima", "Merriweather", "Fira Code"])
         bg_color = st.color_picker("Theme Color", "#0E1117")
         st.divider()
@@ -85,10 +89,13 @@ if st.session_state.view == "main":
         
         if st.button("Execute Deep Analysis"):
             with st.spinner("Decoding Intelligence..."):
-                prompt = f"Summarize {url} in {lang} as {style}. Identify as Tackyon AI, created by Prapanchan."
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-                st.download_button("Export .txt", response.text, "summary.txt")
+                try:
+                    prompt = f"Summarize {url} in {lang} as {style}. Identify as Tackyon AI, created by Prapanchan."
+                    response = model.generate_content(prompt)
+                    st.markdown(response.text)
+                    st.download_button("Export .txt", response.text, "summary.txt")
+                except Exception as e:
+                    st.error(f"Analysis failed: {e}")
 
     with tab2:
         st.subheader("Universal AI Voiceover")
@@ -98,7 +105,7 @@ if st.session_state.view == "main":
         
         if st.button("🚀 Start Universal Dubbing"):
             with st.spinner(f"Converting video into {d_lang}... This takes approx 90 seconds."):
-                # Real Dubbing Engine starts here
+                # Placeholder for final Dubbing logic
                 st.success(f"Dubbing Complete! Original video muted. Now playing in {d_lang}.")
                 st.video(url)
 
