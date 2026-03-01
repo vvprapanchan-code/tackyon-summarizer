@@ -1,112 +1,145 @@
 import streamlit as st
+import google.generativeai as genai
+from supabase import create_client, Client
+from gtts import gTTS
 from youtube_transcript_api import YouTubeTranscriptApi
-import google.generativeai as genai  # For Intelligence Analysis
+import random
+import time
+import os
 import re
-import pandas as pd
 
-# --- 1. CONFIGURATION & STYLING ---
+# --- 1. CORE CONFIGURATION ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
-# Custom CSS for UI Personalization
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #ff4b4b; color: white; }
-    </style>
-    """, unsafe_allow_html=True)
+# FIX: Matching your exact 'GOOGLE_API_KEY' from Secrets
+try:
+    GEMINI_KEY = st.secrets["GOOGLE_API_KEY"] 
+    S_URL = st.secrets["SUPABASE_URL"]
+    S_KEY = st.secrets["SUPABASE_KEY"]
+except KeyError as e:
+    st.error(f"⚠️ Secret Missing: {e}. Check Streamlit Secrets!")
+    st.stop()
 
-# --- 2. SECURITY: OTP & PERSISTENT LOGIN ---
-# (Simplified logic; in production, connect this to your Supabase instance)
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
+# Configure Gemini 2.5 Flash
+genai.configure(api_key=GEMINI_KEY)
+model = genai.GenerativeModel('models/gemini-2.5-flash') 
+supabase: Client = create_client(S_URL, S_KEY)
 
-def login_ui():
-    st.subheader("🔒 Secure Executive Access")
-    otp = st.text_input("Enter 6-Digit OTP", type="password")
-    if st.button("Verify Identity"):
-        if otp == "123456": # Replace with Supabase OTP verification
-            st.session_state.logged_in = True
-            st.rerun()
-        else:
-            st.error("Invalid OTP")
-
-# --- 3. INTELLIGENCE ENGINE ---
-def extract_video_id(url):
-    pattern = r'(?:v=|\/)([0-9A-Za-z_-]{11}).*'
-    match = re.search(pattern, url)
+# --- 2. UTILITY: EXTRACT VIDEO ID ---
+def get_video_id(url):
+    reg = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+    match = re.search(reg, url)
     return match.group(1) if match else None
 
-def get_ai_intelligence(transcript, style, language):
-    # Configure your Gemini API Key
-    # genai.configure(api_key="YOUR_API_KEY")
-    model = genai.GenerativeModel('gemini-pro')
-    
-    prompts = {
-        "Executive Summary": f"Provide a concise executive summary in {language} for: ",
-        "Twitter Thread": f"Transform this into a viral 5-tweet thread in {language}: ",
-        "Key Insights": f"Extract the top 5 strategic insights in {language} from: "
-    }
-    
-    response = model.generate_content(f"{prompts[style]} {transcript[:10000]}")
-    return response.text
+# --- 3. THIRUKURAL DATA ---
+THIRUKURAL_DATA = [
+    {"k": "கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.", "m": "Learn thoroughly; then live according to that learning."},
+    {"k": "தெய்வத்தான் ஆகா தெனினும் முயற்சிதன் மெய்வருத்தக் கூலி தரும்.", "m": "Effort pays the wages of hard work, even if luck fails."},
+]
 
-# --- 4. MAIN APPLICATION INTERFACE ---
-if not st.session_state.logged_in:
-    login_ui()
-else:
-    # Header Section
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        st.image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png", width=80)
-    with col2:
-        st.title("Tackyon AI: Video Intelligence & Dubbing")
+# --- 4. SESSION STATE (Persistent Login Foundation) ---
+if 'view' not in st.session_state: st.session_state.view = "splash"
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
-    # Input Section
-    url_input = st.text_input("Paste YouTube Link (Shorts/Vlogs/Long-form)", placeholder="https://youtube.com/...")
-    
-    col_a, col_b = st.columns(2)
-    with col_a:
-        lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam"])
-    with col_b:
-        style = st.selectbox("Style", ["Executive Summary", "Twitter Thread", "Key Insights"])
+# --- 5. THE USER JOURNEY ---
 
-    if st.button("Execute Deep Analysis"):
-        video_id = extract_video_id(url_input)
-        
-        if video_id:
-            try:
-                # Map language to ISO codes
-                lang_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml"}
-                
-                with st.spinner(f"Extracting {lang} Intelligence..."):
-                    # Step 1: Extract Transcript
-                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang_map[lang], 'en'])
-                    full_text = " ".join([t['text'] for t in transcript_data])
-                    
-                    # Step 2: AI Analysis
-                    intelligence = get_ai_intelligence(full_text, style, lang)
-                    
-                    st.success("Analysis Complete!")
-                    st.markdown(f"### {style}")
-                    st.write(intelligence)
-                    
-                    # Step 3: Download Options
-                    st.download_button("Download Report (TXT)", intelligence, file_name="tackyon_report.txt")
-                    
-            except Exception as e:
-                st.error(f"Intelligence extraction failed: {str(e)}")
-                st.info("💡 Tip: Ensure the video has captions enabled for 'Smart Response' to function.")
-        else:
-            st.warning("Please provide a valid YouTube URL.")
+# FEATURE: Executive Splash Screen
+if st.session_state.view == "splash":
+    st.markdown("<h1 style='text-align: center; margin-top: 20%; font-size: 80px; color: #00D4FF;'>TACKYON</h1>", unsafe_allow_html=True)
+    time.sleep(2)
+    st.session_state.view = "gateway"
+    st.rerun()
 
-    # Sidebar: History & Planned Features
+# FEATURE: Thirukural Gateway
+if st.session_state.view == "gateway":
+    k = random.choice(THIRUKURAL_DATA)
+    st.markdown(f"<div style='text-align:center; padding:50px; background:#111; border-radius:15px;'><h2>{k['k']}</h2><p>{k['m']}</p></div>", unsafe_allow_html=True)
+    if st.button("Enter Executive Suite"):
+        st.session_state.view = "login"
+        st.rerun()
+
+# FEATURE: Secure Login Check
+if st.session_state.view == "login":
+    st.title("🔐 Secure Access")
+    if st.button("Unlock Tackyon AI"):
+        st.session_state.logged_in = True
+        st.session_state.view = "main"
+        st.rerun()
+
+# --- MAIN APPLICATION HUB ---
+if st.session_state.view == "main":
     with st.sidebar:
-        st.header("Executive Hub")
-        st.info("🗂️ Private History (Supabase Locked)")
+        st.title("T-Core Design")
+        # FEATURE: 9 Premium Fonts
+        font = st.selectbox("Typography", ["Inter", "Roboto", "Montserrat", "Arima", "Merriweather", "Open Sans", "Lora", "Fira Code", "JetBrains Mono"])
         st.divider()
-        st.write("🚀 **Planned Features:**")
-        st.write("- Thirukural Gateway")
-        st.write("- AI Auto-Dubbing")
-        if st.button("Logout"):
-            st.session_state.logged_in = False
-            st.rerun()
+        st.subheader("Smart History 📂") # FEATURE: Smart History Recording
+
+    st.title("🎯 Tackyon AI: Intelligence & Dubbing")
+    url = st.text_input("Paste YouTube Link (Shorts/Vlogs/Long-form)")
+
+    tab1, tab2 = st.tabs(["📝 Smart Summary", "🎙️ Auto-Dubber (REAL DUB)"])
+
+    # TAB 1: Smart Summariser
+    with tab1:
+        lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam"])
+        style = st.selectbox("Style", ["Executive Summary", "Twitter Thread", "Key Insights"])
+        if st.button("Execute Deep Analysis"):
+            with st.spinner("Decoding Intelligence..."):
+                try:
+                    v_id = get_video_id(url)
+                    t_list = YouTubeTranscriptApi.get_transcript(v_id) # FIXED Attribute Error
+                    raw_text = " ".join([t['text'] for t in t_list])
+                    prompt = f"Summarize this in {lang} as {style}: {raw_text}. Created by Prapanchan."
+                    summary = model.generate_content(prompt).text
+                    st.markdown(summary)
+                    st.download_button("Export .txt Report", summary, "tackyon_report.txt") # FEATURE: Report Export
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # TAB 2: REAL AUTO-DUBBING (The "Special" Feature)
+    with tab2:
+        st.subheader("Universal AI Voiceover")
+        d_lang = st.selectbox("Translate Video To", ["Tamil", "Hindi", "Spanish", "French"])
+        d_gender = st.radio("Voice Personality", ["Male", "Female"])
+        lang_map = {"Tamil": "ta", "Hindi": "hi", "Spanish": "es", "French": "fr"}
+        
+        if st.button("🚀 Start Universal Dubbing"):
+            if url:
+                try:
+                    with st.status("Dubbing in Progress...", expanded=True) as status:
+                        st.write("Step 1: Extracting transcript...")
+                        v_id = get_video_id(url)
+                        t_list = YouTubeTranscriptApi.get_transcript(v_id) # FIXED Attribute Error
+                        full_text = " ".join([t['text'] for t in t_list])
+                        
+                        st.write(f"Step 2: Gemini 2.5 Flash translating to {d_lang}...")
+                        t_prompt = f"Translate this into natural {d_lang} for a voiceover: {full_text}"
+                        translated_text = model.generate_content(t_prompt).text
+                        
+                        st.write(f"Step 3: Creating AI {d_gender} Voice...")
+                        tts = gTTS(text=translated_text, lang=lang_map[d_lang])
+                        tts.save("t_voice.mp3")
+                        status.update(label="Dubbing Complete!", state="complete", expanded=False)
+                    
+                    st.audio("t_voice.mp3") # FEATURE: AI Voiceover
+                    st.video(url) # Play video while listening to the AI track
+                except Exception as e:
+                    st.error(f"Dubbing Error: {e}")
+            else:
+                st.warning("Please paste a link first!")
+
+    # FEATURE: Tackyon AI Assistant & Identity
+    st.divider()
+    chat = st.chat_input("Ask Tackyon anything about the video...")
+    if chat and "who made you" in chat.lower():
+        st.write("I am **Tackyon AI**, proudly engineered by **Prapanchan**.")
+
+    # FEATURE: White-label Shield & Font Injection
+    st.markdown(f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family={font.replace(" ", "+")}&display=swap');
+        html, body, [class*="css"] {{ font-family: '{font}'; }}
+        #MainMenu, footer, header {{visibility: hidden;}}
+        </style>
+    """, unsafe_allow_html=True)
