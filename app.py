@@ -1,76 +1,80 @@
 import streamlit as st
+import streamlit.components.v1 as components
+from yt_dlp_transcript import yt_dlp_transcript
 import google.generativeai as genai
-from youtube_transcript_api import YouTubeTranscriptApi
-from gtts import gTTS
-import os
-import re
+import yt_dlp
 
-# 1. CORE CONFIG
-st.set_page_config(page_title="Tackyon AI", layout="wide")
+# --- 1. SETUP ---
+# Ensure your GOOGLE_API_KEY is set in .streamlit/secrets.toml
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-try:
-    # Using your dashboard's exact key name
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    # Using 1.5-flash for maximum stability
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception as e:
-    st.error("Missing GOOGLE_API_KEY in Secrets dashboard.")
-    st.stop()
+st.set_page_config(page_title="Tackyon AI", page_icon="🚀")
+st.title("Tackyon 🚀")
+st.subheader("AI YouTube Summariser")
 
-def get_id(url):
-    match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
-    return match.group(1) if match else None
+# --- 2. USER INPUT ---
+url = st.text_input("Paste YouTube Link:")
+lang_choice = st.selectbox("Select Language Method:", ["Common Languages", "Type My Own Language"])
 
-# 2. MAIN INTERFACE
-st.title("🎯 Tackyon AI: Intelligence & Dubbing")
-url = st.text_input("Paste YouTube Link")
+if lang_choice == "Common Languages":
+    lang = st.selectbox("Choose Language:", ["English", "Tamil", "Hindi", "Malayalam", "Telugu", "Kannada"])
+else:
+    lang = st.text_input("Type any language in the world:")
 
-tab1, tab2 = st.tabs(["📝 Smart Summary", "🎙️ Auto-Dubber"])
-
-with tab1:
-    lang = st.selectbox("Language", ["Tamil", "English", "Hindi"])
-    if st.button("Execute Deep Analysis"):
-        with st.spinner("Decoding Intelligence..."):
+# --- 3. MAIN LOGIC (FIXED TO AVOID RED ERRORS) ---
+if st.button("Summarize"):
+    if url and lang:
+        with st.spinner(f"Tackyon is analyzing..."):
             try:
-                v_id = get_id(url)
-                # FIXED: Method must be all lowercase 'get_transcript'
-                data = YouTubeTranscriptApi.get_transcript(v_id)
-                text = " ".join([i['text'] for i in data])
-                res = model.generate_content(f"Summarize in {lang}: {text}").text
-                st.write(res)
+                # STEP A: Get Details First
+                with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    title = info.get('title', 'Video')
+                    uploader = info.get('uploader', 'Creator')
+
+                # STEP B: Try for Transcript
+                try:
+                    text = yt_dlp_transcript(url)
+                except:
+                    text = None # This prevents the "cannot download subtitles" red box
+
+                if text:
+                    # SUCCESS: Detailed Summary
+                    # Using gemini-1.5-flash for high-speed video intelligence
+                    model = genai.GenerativeModel('gemini-1.5-flash') 
+                    prompt = f"Provide a detailed summary of this video in {lang} with bullet points. Content: {text}"
+                    response = model.generate_content(prompt)
+                    st.success(f"Tackyon Victory! Summary for '{title}':")
+                    st.write(response.text)
+                else:
+                    # FRIENDLY FALLBACK (Blue/Yellow Boxes)
+                    st.info(f"Tackyon AI identified: **{title}** by **{uploader}**")
+                    if "shorts" in url.lower():
+                        st.warning("Tackyon AI cannot summarize this Short because it is too brief. Try a longer video!")
+                    else:
+                        st.warning("Tackyon AI cannot access a transcript for this video. This usually happens with Music, poor audio, or if the video is very new.")
+
             except Exception as e:
-                st.error(f"Transcript Error: {e}. Check if the video has captions.")
+                # Catching Age Restrictions & Private Videos
+                error_str = str(e).lower()
+                if "sign in" in error_str or "age" in error_str:
+                    st.info(f"Tackyon AI cannot access this video because it is Private or Age-Restricted.")
+                else:
+                    st.info(f"Tackyon AI is currently unable to process this specific link. Please try another one!")
 
-with tab2:
-    st.subheader("Universal AI Voiceover")
-    target_lang = st.selectbox("Dub to Language", ["Tamil", "Hindi"])
-    l_map = {"Tamil": "ta", "Hindi": "hi"}
-    
-    if st.button("🚀 Start Universal Dubbing"):
-        if url:
-            try:
-                with st.status("Processing...", expanded=True):
-                    v_id = get_id(url)
-                    data = YouTubeTranscriptApi.get_transcript(v_id)
-                    text = " ".join([i['text'] for i in data])
-                    
-                    st.write("Translating...")
-                    trans = model.generate_content(f"Translate to {target_lang}: {text}").text
-                    
-                    st.write("Generating AI Voice...")
-                    tts = gTTS(text=trans, lang=l_map[target_lang])
-                    tts.save("voice.mp3")
-                
-                st.audio("voice.mp3")
-                st.video(url)
-            except Exception as e:
-                st.error(f"Dubbing failed: {e}")
+    else:
+        st.warning("Please provide a link and language for Tackyon!")
 
-# 3. IDENTITY
-st.divider()
-chat = st.chat_input("Ask Tackyon anything...")
-if chat and "who made you" in chat.lower():
-    st.write("I am **Tackyon AI**, engineered by **Prapanchan**.")
-
-# CLEAN STYLE
-st.markdown("<style>#MainMenu, footer {visibility: hidden;}</style>", unsafe_allow_html=True)
+# --- 4. SAFE ADMOB TEST SECTION ---
+st.markdown("---") 
+st.write("Development Mode: Safety Test Ad")
+components.html(
+    f"""
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
+     crossorigin="anonymous"></script>
+    <ins class="adsbygoogle" style="display:inline-block;width:320px;height:50px"
+     data-ad-client="ca-app-pub-3510846848926159" data-ad-slot="6300978111"></ins> 
+    <script>(adsbygoogle = window.adsbygoogle || []).push({{}});</script>
+    """,
+    height=100,
+)
