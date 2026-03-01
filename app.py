@@ -10,19 +10,19 @@ import os
 # --- 1. CORE CONFIGURATION ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
-# FIX: Matching the EXACT spelling 'GOOGLE_API_KEY' from your Secrets dashboard
+# FIX: Exact match for 'GOOGLE_API_KEY' and error handling
 try:
     GEMINI_KEY = st.secrets["GOOGLE_API_KEY"] 
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 except KeyError as e:
-    st.error(f"Secret Key Missing: {e}. Please check your Streamlit Secrets dashboard.")
+    st.error(f"Secret Key Missing: {e}. Check your Streamlit Secrets dashboard.")
     st.stop()
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 genai.configure(api_key=GEMINI_KEY)
 
-# FIX: Calling the high-speed Gemini 2.5 Flash model
+# FIX: Calling the high-speed Gemini 2.5 Flash model correctly
 model = genai.GenerativeModel('models/gemini-2.5-flash') 
 
 # --- 2. THIRUKURAL DATABASE ---
@@ -70,7 +70,7 @@ if st.session_state.view == "login":
 # FEATURE: THE MAIN HUB
 if st.session_state.view == "main":
     with st.sidebar:
-        st.title("T-Core Design Hub")
+        st.title("T-Core Design")
         font = st.selectbox("Typography", ["Inter", "Roboto", "Montserrat", "Arima", "Merriweather", "Fira Code"])
         bg_color = st.color_picker("Theme Color", "#0E1117")
         st.divider()
@@ -95,7 +95,7 @@ if st.session_state.view == "main":
                     st.markdown(response.text)
                     st.download_button("Export .txt", response.text, "summary.txt")
                 except Exception as e:
-                    st.error(f"Analysis failed: {e}")
+                    st.error(f"Analysis error: {e}")
 
     with tab2:
         st.subheader("Universal AI Voiceover")
@@ -105,7 +105,7 @@ if st.session_state.view == "main":
         
         if st.button("🚀 Start Universal Dubbing"):
             with st.spinner(f"Converting video into {d_lang}... This takes approx 90 seconds."):
-                # Placeholder for final Dubbing logic
+                # Placeholder for the final dubbing logic
                 st.success(f"Dubbing Complete! Original video muted. Now playing in {d_lang}.")
                 st.video(url)
 
