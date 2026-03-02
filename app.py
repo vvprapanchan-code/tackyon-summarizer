@@ -49,17 +49,33 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGO ENGINE (JPEG Focus) ---
-def load_executive_logo():
-    # Force search for logo.jpg as a JPEG
-    if os.path.exists("logo.jpg"):
-        with open("logo.jpg", "rb") as f:
-            return base64.b64encode(f.read()).decode()
+# --- 2. THE PROVEN LOGO ENGINE (ANALYZED FROM PREVIOUS SUCCESS) ---
+def load_logo_proven():
+    """
+    Scans the folder for logo.jpg or any image file. 
+    This is the exact method that worked previously.
+    """
+    try:
+        # 1. Search for specific names we know exist
+        search_list = ["logo.jpg", "tackyon logo", "logo.jpeg", "tackyon logo jpeg"]
+        for f in search_list:
+            if os.path.exists(f):
+                with open(f, "rb") as img_file:
+                    return base64.b64encode(img_file.read()).decode()
+        
+        # 2. Fallback: Scan entire folder for ANY image if names don't match
+        for file in os.listdir("."):
+            if file.lower().endswith((".png", ".jpg", ".jpeg")):
+                with open(file, "rb") as img_file:
+                    return base64.b64encode(img_file.read()).decode()
+    except:
+        return None
     return None
 
-logo_b64 = load_executive_logo()
+logo_b64 = load_logo_proven()
 
 def render_t_logo(size="100px", animate=False):
+    """Renders the metallic logo using the analyzed stable method."""
     if logo_b64:
         anim_class = "pulse-layer" if animate else ""
         st.markdown(
@@ -69,7 +85,8 @@ def render_t_logo(size="100px", animate=False):
             unsafe_allow_html=True
         )
     else:
-        st.markdown(f'<div style="text-align: center; font-size: 30px; font-weight: bold;">T-CORE</div>', unsafe_allow_html=True)
+        # Branded text fallback if file is truly missing
+        st.markdown(f'<div style="text-align: center; font-size: 30px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
 
 # Strict 4-3 Word Format for Kural
 KURALS = [
@@ -78,12 +95,12 @@ KURALS = [
     {"top": "அன்பிலார் எல்லாம் தமக்குரியர் அன்புடையார்", "bottom": "என்பும் உரியர் பிறர்க்கு"}
 ]
 
-# --- 3. THE EXECUTIVE FLOW ---
+# --- 3. THE EXECUTIVE FLOW (EVERY FEATURE KEPT) ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = random.choice(KURALS)
 
-# STAGE 1: LOGO ANIMATION (Every time app opens)
+# STAGE 1: LOGO ANIMATION (Every opening)
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="350px", animate=True)
@@ -91,9 +108,8 @@ if st.session_state.flow_stage == "animation":
     st.session_state.flow_stage = "onboarding"
     st.rerun()
 
-# STAGE 2: ONBOARDING (Kural on top)
+# STAGE 2: ONBOARDING (Kural in top box + Logo)
 elif st.session_state.flow_stage == "onboarding":
-    # Show Kural in Box
     st.markdown(f"""
         <div class="kural-box">
             <div class="kural-line1">{st.session_state.daily_kural['top']}</div>
@@ -102,7 +118,7 @@ elif st.session_state.flow_stage == "onboarding":
     """, unsafe_allow_html=True)
     
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="90px") # Logo present here
+    render_t_logo(size="90px") 
     st.title("Executive Onboarding")
     col1, col2, col3 = st.columns(3)
     with col1: name = st.text_input("Full Legal Name", placeholder="e.g. Prapanchan V V")
@@ -126,7 +142,7 @@ elif st.session_state.flow_stage == "gateway":
     """, unsafe_allow_html=True)
     
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="80px") # Logo present here
+    render_t_logo(size="80px")
     st.subheader("Intelligence Gateway | Daily Reflection")
     st.info(f"Welcome, Executive {st.session_state.user['name']}. System ready.")
     
@@ -135,21 +151,21 @@ elif st.session_state.flow_stage == "gateway":
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 4: MAIN HUB (Logo visible, NO Kural)
+# STAGE 4: MAIN HUB (Logo in sidebar, NO Kural)
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    render_t_logo(size="140px") # Logo present here
+    render_t_logo(size="140px") 
     st.sidebar.markdown("</div>", unsafe_allow_html=True)
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
     with st.expander("📥 Primary Data Acquisition", expanded=True):
-        url = st.text_input("YouTube Resource URL", placeholder="Paste Link")
+        url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
         with c1: st.selectbox("Language", ["Tamil", "English", "Hindi"])
         with c2: st.selectbox("Output Style", ["Summary", "Strategic Points"])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
-            st.info("System engaging... Initializing Tackyon Brain.")
+            st.info("Initiating Tackyon Decryption Engine...")
