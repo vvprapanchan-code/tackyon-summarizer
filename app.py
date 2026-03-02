@@ -8,12 +8,20 @@ st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. COMPLETELY HIDE THE TOP WHITE BOX & MENU */
+    /* 1. FORCE-HIDE THE TOP WHITE BOX & ALL STREAMLIT HEADERS */
+    header, [data-testid="stHeader"], .stAppHeader {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
+    }
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden !important; height: 0px !important;}
     footer {visibility: hidden;}
-    .block-container {padding-top: 0px !important; margin-top: -50px !important;}
-    [data-testid="stHeader"] {display: none !important;}
+    
+    /* Remove top padding completely */
+    .block-container {
+        padding-top: 0px !important;
+        margin-top: -30px !important;
+    }
     
     /* 2. EXECUTIVE CARD DESIGN */
     .executive-card {
@@ -32,17 +40,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE LOGO FINDER (RELIABLE) ---
-def load_logo_robustly():
-    # We look for the file you renamed, or common variations
-    filenames = ["logo.jpg", "logo.jpeg", "tackyon logo.jpg", "tackyon logo.jpeg"]
+# --- 2. THE LOGO FINDER (SEARCHES ALL POSSIBLE NAMES) ---
+def load_logo_final():
+    # This checks for every name we've tried so it CANNOT fail if the file is there
+    filenames = ["logo.jpg", "logo.jpeg", "logo", "tackyon logo.jpg", "tackyon logo"]
     for f in filenames:
         if os.path.exists(f):
             with open(f, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode()
     return None
 
-logo_b64 = load_logo_robustly()
+logo_b64 = load_logo_final()
 
 def display_t_logo(size="100px", animate=False):
     if logo_b64:
@@ -54,7 +62,9 @@ def display_t_logo(size="100px", animate=False):
             unsafe_allow_html=True
         )
     else:
-        st.error("❌ LOGO NOT FOUND: Please rename your file to 'logo.jpg' and put it in this folder.")
+        # If still not found, show a professional placeholder so the app doesn't look broken
+        st.markdown(f'<div style="font-size: {size}; text-align: center;">🎯</div>', unsafe_allow_html=True)
+        st.error("⚠️ System Note: 'logo.jpg' not detected in folder. Using default T-Core icon.")
 
 # --- 3. THE EXECUTIVE FLOW ---
 if "flow_stage" not in st.session_state:
@@ -62,7 +72,6 @@ if "flow_stage" not in st.session_state:
 
 # STAGE 1: THE 2-SECOND FULLSCREEN PULSE
 if st.session_state.flow_stage == "animation":
-    st.write(" ") # Spacer
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     display_t_logo(size="300px", animate=True)
     time.sleep(2)
@@ -75,9 +84,8 @@ elif st.session_state.flow_stage == "onboarding":
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     display_t_logo(size="80px")
     st.title("Executive Onboarding")
-    st.markdown("<p style='color: #5D6D7E;'>Identify yourself to access the Intelligence Hub.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #5D6D7E;'>Please provide your credentials to proceed to the Hub.</p>", unsafe_allow_html=True)
     
-    # Tabular Layout
     col1, col2, col3 = st.columns(3)
     with col1: name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
     with col2: gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
@@ -98,7 +106,7 @@ elif st.session_state.flow_stage == "gateway":
     st.subheader("Intelligence Gateway | Daily Reflection")
     
     st.markdown("""
-        <div style="background: #F4F6F7; border-left: 6px solid #1B2631; padding: 30px; border-radius: 0 15px 15px 0; margin: 25px 0; text-align: left;">
+        <div style="background: #F4F6F7; border-left: 6px solid #1B2631; padding: 30px; border-radius: 0 15px 15px 0; margin: 20px 0; text-align: left;">
             <h2 style="color: #1B2631; font-family: 'serif';">கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.</h2>
             <hr>
             <p style="color: #5D6D7E; font-size: 1.1em; font-style: italic;">"Learn thoroughly, then live according to that learning."</p>
