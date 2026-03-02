@@ -4,73 +4,62 @@ import base64
 import os
 import random
 
-# --- 1. UI ARCHITECTURE (THE "KURAL-IN-A-BOX" FIX) ---
+# --- 1. THEME & DYNAMIC HEADER ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. UTILIZE THE TOP WHITE BOX FOR THE KURAL */
+    /* Hide default headers but keep space for our custom Kural bar */
     header, [data-testid="stHeader"], .stAppHeader {
-        background-color: #F8F9FA !important;
-        height: 100px !important;
-        border-bottom: 2px solid #1B2631;
-        display: block !important;
-        visibility: visible !important;
+        display: none !important;
+        visibility: hidden !important;
     }
     
-    /* 2. PADDING TO PREVENT LOGO CUT-OFF */
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 0px !important;
+        margin-top: -30px !important;
     }
-    
-    /* 3. KURAL FORMATTING (STRICT 4-3 WORD RULE) */
+
+    /* Kural Box - Fixed at top */
     .kural-box {
+        background-color: #FDFEFE;
+        border-bottom: 2px solid #D4AC0D;
+        padding: 15px;
         text-align: center;
         width: 100%;
-        position: fixed;
-        top: 15px;
-        z-index: 999;
+        margin-bottom: 30px;
     }
-    .kural-top { font-size: 1.2em; font-weight: bold; color: #1B2631; }
-    .kural-bottom { font-size: 1.0em; color: #5D6D7E; }
+    .kural-line1 { font-size: 1.4em; font-weight: bold; color: #1B2631; margin-bottom: 5px; }
+    .kural-line2 { font-size: 1.2em; color: #5D6D7E; }
 
-    /* EXECUTIVE CARD DESIGN */
+    /* Executive Card Styling */
     .executive-card {
         background: white; padding: 40px; border-radius: 20px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-top: 6px solid #1B2631;
-        text-align: center; max-width: 800px; margin: auto;
+        text-align: center; max-width: 850px; margin: auto;
     }
 
-    /* PULSE ANIMATION */
+    /* Metallic T-Pulse Animation */
     @keyframes t-pulse {
         0% { transform: scale(1); filter: brightness(100%); }
-        50% { transform: scale(1.05); filter: brightness(120%); }
+        50% { transform: scale(1.05); filter: brightness(125%); }
         100% { transform: scale(1); filter: brightness(100%); }
     }
     .pulse-layer { animation: t-pulse 2s infinite ease-in-out; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE TRIPLE-LAYER LOGO SCANNER ---
-def load_logo_robustly():
-    """Searches for the logo using every possible name and extension."""
-    search_list = ["logo.jpg", "tackyon logo", "logo.jpeg", "tackyon logo.jpeg", "17975.png"]
-    for f in search_list:
-        if os.path.exists(f):
-            with open(f, "rb") as img_file:
-                return base64.b64encode(img_file.read()).decode()
+# --- 2. LOGO ENGINE (JPEG Focus) ---
+def load_executive_logo():
+    # Force search for logo.jpg as a JPEG
+    if os.path.exists("logo.jpg"):
+        with open("logo.jpg", "rb") as f:
+            return base64.b64encode(f.read()).decode()
     return None
 
-logo_b64 = load_logo_robustly()
+logo_b64 = load_executive_logo()
 
-# Strict 4-3 Format Data
-KURALS = [
-    {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"},
-    {"top": "அகர முதல எழுத்தெல்லாம் ஆதி", "bottom": "பகவன் முதற்றே உலகு"},
-    {"top": "அன்பிலார் எல்லாம் தமக்குரியர் அன்புடையார்", "bottom": "என்பும் உரியர் பிறர்க்கு"}
-]
-
-def render_logo(size="100px", animate=False):
+def render_t_logo(size="100px", animate=False):
     if logo_b64:
         anim_class = "pulse-layer" if animate else ""
         st.markdown(
@@ -80,64 +69,87 @@ def render_logo(size="100px", animate=False):
             unsafe_allow_html=True
         )
     else:
-        # If it fails, show high-end text instead of emoji
-        st.markdown(f'<div style="text-align: center; font-size: 30px; font-weight: bold; color: #1B2631;">T-CORE AI</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: center; font-size: 30px; font-weight: bold;">T-CORE</div>', unsafe_allow_html=True)
 
-# --- 3. THE BRANDED FLOW ---
+# Strict 4-3 Word Format for Kural
+KURALS = [
+    {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"},
+    {"top": "அகர முதல எழுத்தெல்லாம் ஆதி", "bottom": "பகவன் முதற்றே உலகு"},
+    {"top": "அன்பிலார் எல்லாம் தமக்குரியர் அன்புடையார்", "bottom": "என்பும் உரியர் பிறர்க்கு"}
+]
+
+# --- 3. THE EXECUTIVE FLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = random.choice(KURALS)
 
-# STAGE 1: 2-SECOND FULLSCREEN PULSE
+# STAGE 1: LOGO ANIMATION (Every time app opens)
 if st.session_state.flow_stage == "animation":
-    st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
-    render_logo(size="350px", animate=True)
+    st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
+    render_t_logo(size="350px", animate=True)
     time.sleep(2)
     st.session_state.flow_stage = "onboarding"
     st.rerun()
 
-# DISPLAY KURAL AT THE TOP (EXCEPT DURING SPLASH)
-if st.session_state.flow_stage != "animation":
+# STAGE 2: ONBOARDING (Kural on top)
+elif st.session_state.flow_stage == "onboarding":
+    # Show Kural in Box
     st.markdown(f"""
         <div class="kural-box">
-            <div class="kural-top">{st.session_state.daily_kural['top']}</div>
-            <div class="kural-bottom">{st.session_state.daily_kural['bottom']}</div>
+            <div class="kural-line1">{st.session_state.daily_kural['top']}</div>
+            <div class="kural-line2">{st.session_state.daily_kural['bottom']}</div>
         </div>
     """, unsafe_allow_html=True)
-    st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True) # Space for Kural
-
-# STAGE 2: ONBOARDING
-if st.session_state.flow_stage == "onboarding":
+    
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_logo(size="90px")
+    render_t_logo(size="90px") # Logo present here
     st.title("Executive Onboarding")
     col1, col2, col3 = st.columns(3)
     with col1: name = st.text_input("Full Legal Name", placeholder="e.g. Prapanchan V V")
-    with col2: gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3: age = st.number_input("Age", 18, 99, 19)
+    with col2: gender = st.selectbox("Gender Identity", ["Male", "Female", "Executive"])
+    with col3: age = st.number_input("Age Group", 18, 99, 19)
     
     if st.button("Begin Your Journey", use_container_width=True):
         if name:
             st.session_state.user = {"name": name, "gender": gender, "age": age}
-            st.session_state.flow_stage = "hub"
+            st.session_state.flow_stage = "gateway"
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 4: THE HUB
-elif st.session_state.flow_stage == "hub":
+# STAGE 3: GATEWAY (Same Kural + Logo)
+elif st.session_state.flow_stage == "gateway":
+    st.markdown(f"""
+        <div class="kural-box">
+            <div class="kural-line1">{st.session_state.daily_kural['top']}</div>
+            <div class="kural-line2">{st.session_state.daily_kural['bottom']}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
+    render_t_logo(size="80px") # Logo present here
+    st.subheader("Intelligence Gateway | Daily Reflection")
+    st.info(f"Welcome, Executive {st.session_state.user['name']}. System ready.")
+    
+    if st.button("Enter Intelligence Hub", use_container_width=True):
+        st.session_state.flow_stage = "hub"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# STAGE 4: MAIN HUB (Logo visible, NO Kural)
+else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    render_logo(size="130px")
+    render_t_logo(size="140px") # Logo present here
     st.sidebar.markdown("</div>", unsafe_allow_html=True)
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
     with st.expander("📥 Primary Data Acquisition", expanded=True):
-        url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
+        url = st.text_input("YouTube Resource URL", placeholder="Paste Link")
         c1, c2, c3 = st.columns(3)
         with c1: st.selectbox("Language", ["Tamil", "English", "Hindi"])
-        with c2: st.selectbox("Style", ["Summary", "Key Points"])
-        with c3: st.selectbox("Font", ["Inter", "Arima"])
+        with c2: st.selectbox("Output Style", ["Summary", "Strategic Points"])
+        with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
             st.info("System engaging... Initializing Tackyon Brain.")
