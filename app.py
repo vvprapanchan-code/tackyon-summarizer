@@ -17,10 +17,10 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Remove top padding completely */
+    /* Remove top padding and empty boxes completely */
     .block-container {
         padding-top: 0px !important;
-        margin-top: -30px !important;
+        margin-top: -50px !important;
     }
     
     /* 2. EXECUTIVE CARD DESIGN */
@@ -33,24 +33,27 @@ st.markdown("""
     /* 3. METALLIC LOGO PULSE ANIMATION */
     @keyframes metallic-pulse {
         0% { transform: scale(1); filter: brightness(100%) drop-shadow(0 0 5px rgba(0,0,0,0.2)); }
-        50% { transform: scale(1.08); filter: brightness(120%) drop-shadow(0 0 20px rgba(0,102,204,0.4)); }
+        50% { transform: scale(1.1); filter: brightness(125%) drop-shadow(0 0 25px rgba(0,102,204,0.5)); }
         100% { transform: scale(1); filter: brightness(100%) drop-shadow(0 0 5px rgba(0,0,0,0.2)); }
     }
     .pulse-logo { animation: metallic-pulse 2s infinite ease-in-out; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE LOGO FINDER (SEARCHES ALL POSSIBLE NAMES) ---
-def load_logo_final():
-    # This checks for every name we've tried so it CANNOT fail if the file is there
-    filenames = ["logo.jpg", "logo.jpeg", "logo", "tackyon logo.jpg", "tackyon logo"]
-    for f in filenames:
+# --- 2. THE ULTIMATE LOGO FINDER (SEARCHES EVERY POSSIBILITY) ---
+def load_logo_robustly():
+    # This list covers every possible way your file might be named in the folder
+    search_names = [
+        "logo.jpg", "logo.jpeg", "logo.jpg.jpeg", "logo.jpeg.jpg",
+        "tackyon logo.jpg", "tackyon logo.jpeg", "tackyon logo"
+    ]
+    for f in search_names:
         if os.path.exists(f):
             with open(f, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode()
     return None
 
-logo_b64 = load_logo_final()
+logo_b64 = load_logo_robustly()
 
 def display_t_logo(size="100px", animate=False):
     if logo_b64:
@@ -62,9 +65,9 @@ def display_t_logo(size="100px", animate=False):
             unsafe_allow_html=True
         )
     else:
-        # If still not found, show a professional placeholder so the app doesn't look broken
+        # If no file is found, show a professional placeholder so the app stays clean
         st.markdown(f'<div style="font-size: {size}; text-align: center;">🎯</div>', unsafe_allow_html=True)
-        st.error("⚠️ System Note: 'logo.jpg' not detected in folder. Using default T-Core icon.")
+        st.error("⚠️ T-Core Logo Not Detected. Using default system icon.")
 
 # --- 3. THE EXECUTIVE FLOW ---
 if "flow_stage" not in st.session_state:
@@ -73,23 +76,24 @@ if "flow_stage" not in st.session_state:
 # STAGE 1: THE 2-SECOND FULLSCREEN PULSE
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
-    display_t_logo(size="300px", animate=True)
+    display_t_logo(size="320px", animate=True)
     time.sleep(2)
     st.session_state.flow_stage = "onboarding"
     st.rerun()
 
-# STAGE 2: EXECUTIVE ONBOARDING
+# STAGE 2: EXECUTIVE CREDENTIALING (Furnished Onboarding)
 elif st.session_state.flow_stage == "onboarding":
     st.markdown('<div style="height: 10vh;"></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    display_t_logo(size="80px")
+    display_t_logo(size="90px")
     st.title("Executive Onboarding")
-    st.markdown("<p style='color: #5D6D7E;'>Please provide your credentials to proceed to the Hub.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #5D6D7E; font-size: 1.1em;'>Provide your credentials to initialize the Intelligence Hub.</p>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
-    with col1: name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with col2: gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3: age = st.number_input("Age", 18, 99, 19)
+    # 3-Column Furnished Layout
+    c1, c2, c3 = st.columns(3)
+    with c1: name = st.text_input("Full Legal Name", placeholder="e.g. Prapanchan V V")
+    with c2: gender = st.selectbox("Gender Identity", ["Male", "Female", "Executive"])
+    with c3: age = st.number_input("Age Group", 18, 99, 19)
     
     if st.button("Begin Your Journey", use_container_width=True):
         if name:
@@ -98,44 +102,22 @@ elif st.session_state.flow_stage == "onboarding":
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 3: THIRUKURAL GATEWAY
-elif st.session_state.flow_stage == "gateway":
-    st.markdown('<div style="height: 10vh;"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    display_t_logo(size="70px")
-    st.subheader("Intelligence Gateway | Daily Reflection")
-    
-    st.markdown("""
-        <div style="background: #F4F6F7; border-left: 6px solid #1B2631; padding: 30px; border-radius: 0 15px 15px 0; margin: 20px 0; text-align: left;">
-            <h2 style="color: #1B2631; font-family: 'serif';">கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.</h2>
-            <hr>
-            <p style="color: #5D6D7E; font-size: 1.1em; font-style: italic;">"Learn thoroughly, then live according to that learning."</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    if st.button("Enter Intelligence Hub", use_container_width=True):
-        st.session_state.flow_stage = "hub"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# STAGE 4: MAIN HUB
-else:
+# STAGE 4: THE HUB (READY FOR STEP 5)
+elif st.session_state.flow_stage == "hub":
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    display_t_logo(size="120px")
+    display_t_logo(size="130px")
     st.sidebar.markdown("</div>", unsafe_allow_html=True)
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
     
-    with st.container():
-        st.markdown("### 📥 Primary Data Acquisition")
-        url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
-        
-        c1, c2, c3 = st.columns(3)
-        with c1: st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi"])
-        with c2: st.selectbox("Analysis Output", ["Summary", "Strategic Points"])
-        with c3: st.selectbox("Interface Typography", ["Inter", "Arima"])
+    with st.expander("📥 Primary Data Acquisition", expanded=True):
+        url = st.text_input("Resource URL", placeholder="Paste YouTube Link (Shorts/Vlogs/Long-form)")
+        col_l, col_s, col_f = st.columns(3)
+        with col_l: st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi"])
+        with col_s: st.selectbox("Analysis Output", ["Summary", "Points"])
+        with col_f: st.selectbox("Interface Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
             st.info("System engaging... Initializing Tackyon Brain.")
