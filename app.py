@@ -92,7 +92,7 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 4. INTELLIGENCE ENGINE (LONG-FORM & SECURE) ---
+# --- 4. INTELLIGENCE ENGINE (GLOBAL & SECURE) ---
 def get_video_data(url):
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
@@ -114,14 +114,12 @@ def get_video_data(url):
 
 def generate_ai_analysis(transcript, metadata, style, lang, mode):
     try:
-        # PULL KEY FROM VAULT
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         
-        # FIXED MODEL NAME TO AVOID 404
+        # KEPT YOUR SUCCESSFUL MODEL CHOICE
         model = genai.GenerativeModel('gemini-2.5-flash')
         
-        # INSTRUCTION FOR MAXIMUM DETAIL
         long_instr = "Provide an extremely long, exhaustive, and detailed analysis. Do not summarize briefly."
         
         if mode == "meta_only":
@@ -134,7 +132,7 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
     except Exception as e:
         return f"Intelligence Hub Offline. Error: {str(e)}"
 
-# --- 5. THE EXECUTIVE WORKFLOW (FIXED SYNTAX) ---
+# --- 5. THE EXECUTIVE WORKFLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
@@ -147,7 +145,6 @@ if st.session_state.flow_stage == "animation":
     st.rerun()
 
 elif st.session_state.flow_stage == "onboarding":
-    # FIXED DISPLAY LOGIC TO PREVENT SYNTAX ERROR
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     render_t_logo(size="100px") 
@@ -183,9 +180,18 @@ else:
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
-        with c1: lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
-        with c2: style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
-        with c3: st.selectbox("Typography", ["Inter", "Arima"])
+        with c1: 
+            # EXPANDED GLOBAL LANGUAGE LIST
+            lang = st.selectbox("Intelligence Language", [
+                "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", "Marathi", "Bengali", "Gujarati", "Punjabi",
+                "French", "German", "Spanish", "Japanese", "Chinese (Simplified)", "Chinese (Traditional)", "Korean", 
+                "Russian", "Arabic", "Portuguese", "Italian", "Turkish", "Dutch", "Vietnamese", "Thai", "Indonesian",
+                "Malay", "Greek", "Hebrew", "Swedish", "Norwegian", "Danish", "Finnish", "Polish", "Hungarian", "Czech"
+            ])
+        with c2: 
+            style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
+        with c3: 
+            st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
             if url:
