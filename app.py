@@ -1,6 +1,7 @@
 # ==============================================================================
-# TACKYON AI: ULTIMATE SOVEREIGN SUITE (BUILD 2026.03.07)
-# FIXES: AUDIO ENGINE, YOUTUBE ACCESS, & DIRECTORY ERRORS
+# TACKYON AI: NEURAL INTERPRETER (AUDIO-ONLY EDITION)
+# CORE MODEL: GEMINI 3 FLASH
+# STRATEGY: HIGHSPEED TRANSCRIPTION & NEURAL VOICE SYNTHESIS
 # ==============================================================================
 
 import streamlit as st
@@ -13,136 +14,167 @@ import google.generativeai as genai
 from yt_dlp import YoutubeDL
 from youtube_transcript_api import YouTubeTranscriptApi
 from gtts import gTTS
-import subprocess
 from datetime import datetime
 
-# --- STAGE 0: THE AUDIO BRIDGE (FIXES PYAUDIOOP ERROR) ---
+# --- STAGE 0: PYTHON 3.13 AUDIO ENGINE PATCH ---
 try:
     import audioop
 except ImportError:
     try:
         import audioop_lts as audioop
-        # This line is the "Bridge" that pydub needs
         import sys
         sys.modules['audioop'] = audioop 
     except ImportError:
-        st.error("Protocol Error: audioop-lts not found in environment.")
+        st.error("Protocol Alert: 'audioop-lts' is required for voice synthesis.")
 
-from pydub import AudioSegment
-
-# --- STAGE 1: AUTO-INITIALIZATION (FIXES FILENOTFOUND) ---
-def initialize_system():
-    # Automatically creates these folders so the app never crashes
-    for folder in ['temp', 'exports', 'logs', 'assets']:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-initialize_system()
-
-# --- STAGE 2: EXECUTIVE STYLING ---
-st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
+# --- STAGE 1: EXECUTIVE INTERFACE & BRANDING ---
+st.set_page_config(page_title="Tackyon Interpreter", page_icon="🎙️", layout="wide")
 
 st.markdown("""
     <style>
     header, [data-testid="stHeader"], .stAppHeader { display: none !important; }
     .block-container { padding-top: 0px !important; margin-top: -20px !important; }
-    .wisdom-frame { background: white; border-bottom: 5px solid #D4AC0D; padding: 40px; text-align: center; border-radius: 0 0 40px 40px; }
-    .wisdom-top { font-size: 1.8em; font-weight: 900; color: #1B2631; }
-    .report-frame { background: #FFFFFF; padding: 50px; border-radius: 30px; border-left: 15px solid #1B2631; box-shadow: 0 15px 45px rgba(0,0,0,0.05); }
+    
+    .wisdom-frame {
+        background: #FFFFFF; border-bottom: 5px solid #D4AC0D; padding: 30px;
+        text-align: center; width: 100%; margin-bottom: 40px; border-radius: 0 0 40px 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+    .wisdom-top { font-size: 1.7em; font-weight: 800; color: #1B2631; }
+
+    .interpreter-card {
+        background: #FFFFFF; padding: 40px; border-radius: 25px;
+        border-left: 15px solid #1B2631; position: relative;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.06); margin-top: 30px;
+    }
+    
+    .tackyon-seal {
+        position: absolute; bottom: 15px; right: 25px; font-size: 0.8em;
+        color: rgba(27, 38, 49, 0.3); font-weight: 900; letter-spacing: 2px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- STAGE 3: STEALTH DOWNLOAD ENGINE (FIXES 403 ERROR) ---
-def decrypt_resource(url):
+def initialize_directories():
+    """Ensures temp storage exists to prevent FileNotFoundError."""
+    for folder in ['temp', 'voice_exports']:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+def load_identity():
+    """Retrieves official Tackyon band image."""
+    for f in ["logo.jpg", "logo.png", "t_symbol.jpg", "logo.jpeg"]:
+        if os.path.exists(f):
+            with open(f, "rb") as i: return base64.b64encode(i.read()).decode()
+    return None
+
+IDENTITY_B64 = load_identity()
+initialize_directories()
+
+# --- STAGE 2: STEALTH INTELLIGENCE EXTRACTION ---
+
+def extract_intelligence(url):
+    """Bypasses YouTube blocks to get speech data for translation."""
     try:
-        fid = int(time.time())
-        # Stealth Headers: Tells YouTube we are a human on Chrome
+        # Use stealth headers to avoid 403 Forbidden
         ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]', 
-            'outtmpl': f'temp/raw_{fid}.mp4',
             'quiet': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'referer': 'https://www.youtube.com/'
+            'no_warnings': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36'
         }
         with YoutubeDL(ydl_opts) as ydl:
-            meta = ydl.extract_info(url, download=True)
-            vid = meta['id']
-            
+            meta = ydl.extract_info(url, download=False)
+            video_id = meta['id']
+            video_title = meta['title']
+        
+        # Priority 1: Direct Transcript
         try:
-            raw_t = YouTubeTranscriptApi.get_transcript(vid)
+            raw_t = YouTubeTranscriptApi.get_transcript(video_id)
             content = " ".join([e['text'] for e in raw_t])
+            mode = "Deep Neural Sync"
         except:
-            content = f"Title: {meta.get('title')}. Description: {meta.get('description', 'N/A')}"
+            # Priority 2: Description Fallback
+            content = f"Title: {video_title}. Context: {meta.get('description', 'N/A')}"
+            mode = "Contextual Inference"
             
-        return {"title": meta['title'], "path": f'temp/raw_{fid}.mp4', "data": content, "fid": fid}
+        return {"title": video_title, "content": content, "mode": mode, "id": video_id}
     except Exception as e:
-        st.error(f"Access Denied (403): YouTube is blocking Streamlit. {str(e)}")
+        st.error(f"Access Error: {str(e)}")
         return None
 
-# --- STAGE 4: PRODUCTION STUDIO ---
-def execute_dub(res, lang, persona):
+# --- STAGE 3: NEURAL VOICE PRODUCTION ---
+
+def generate_dub_audio(intel_data, lang, persona):
+    """Converts video data into a high-quality neural voice."""
     try:
-        fid = res['fid']
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('gemini-3-flash')
+        # Using Gemini 3 Flash for the 2026 Sovereign Engine
+        brain = genai.GenerativeModel('gemini-3-flash')
         
-        # Script preparation
-        script = model.generate_content(f"Create a natural dubbing script in {lang}: {res['data'][:4000]}").text
+        # Create a professional script for the voice
+        script_prompt = f"Convert this text into a flowing, professional {persona} dubbing script in {lang}. Return ONLY the script: {intel_data['content'][:5000]}"
+        script = brain.generate_content(script_prompt).text
         
-        l_map = {"Tamil": "ta", "English": "en", "Hindi": "hi"}
-        voice = gTTS(text=script, lang=l_map.get(lang, "en"), slow=False)
-        v_path = f"temp/v_{fid}.mp3"
-        voice.save(v_path)
+        l_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "French": "fr"}
+        tts = gTTS(text=script, lang=l_map.get(lang, "ta"), slow=False)
         
-        out = f"exports/Tackyon_{fid}.mp4"
-        # Mute original and merge AI voice
-        cmd = ['ffmpeg', '-i', res['path'], '-i', v_path, '-c:v', 'copy', '-c:a', 'aac', 
-               '-map', '0:v:0', '-map', '1:a:0', '-shortest', out, '-y']
-        subprocess.run(cmd, capture_output=True)
-        return out
-    except: return None
+        audio_filename = f"temp/dub_{intel_data['id']}.mp3"
+        tts.save(audio_filename)
+        return audio_filename
+    except Exception as e:
+        st.error(f"Voice Synthesis Error: {str(e)}")
+        return None
 
-# --- STAGE 5: WORKFLOW ---
-if "kernel" not in st.session_state:
-    st.session_state.kernel = {"stage": "boot", "user": None}
+# --- STAGE 4: EXECUTIVE FLOW ---
 
-if st.session_state.kernel["stage"] == "boot":
-    st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
-    st.title("TACKYON AI")
-    p = st.progress(0)
-    for i in range(100):
-        time.sleep(0.01)
-        p.progress(i + 1)
-    st.session_state.kernel["stage"] = "hub"
-    st.rerun()
+if "interpreter_state" not in st.session_state:
+    st.session_state.interpreter_state = {"stage": "identification", "user": None}
+
+if st.session_state.interpreter_state["stage"] == "identification":
+    st.markdown('<div class="id-portal" style="background:white; padding:50px; border-radius:30px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.1); border-top:10px solid #1B2631; max-width:800px; margin: 50px auto;">', unsafe_allow_html=True)
+    if IDENTITY_B64:
+        st.markdown(f'<img src="data:image/jpeg;base64,{IDENTITY_B64}" width="100" style="border-radius:20px; margin-bottom:20px;">', unsafe_allow_html=True)
+    st.title("Tackyon Interpreter Access")
+    name = st.text_input("Executive Name")
+    if st.button("AUTHORIZE SYSTEM", use_container_width=True):
+        if name:
+            st.session_state.interpreter_state["user"] = name
+            st.session_state.interpreter_state["stage"] = "hub"
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    st.markdown('<div class="wisdom-frame"><div class="wisdom-top">Sovereign Intelligence Suite</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="wisdom-frame"><div class="wisdom-top">Tackyon Neural Interpreter</div></div>', unsafe_allow_html=True)
+    st.title(f"Active Session: {st.session_state.interpreter_state['user']}")
     
-    tab1, tab2 = st.tabs(["🔍 Intelligence Summary", "🎙️ Universal Dubbing Studio"])
     
-    with tab1:
-        st.subheader("Deep Intelligence Extraction")
-        url_s = st.text_input("Enter Video URL")
-        l_s = st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi"])
-        if st.button("Execute Deep Analysis"):
-            res = decrypt_resource(url_s)
-            if res:
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                model = genai.GenerativeModel('gemini-3-flash')
-                analysis = model.generate_content(f"Exhaustive analysis in {l_s} for: {res['data'][:6000]}").text
-                st.markdown(f'<div class="report-frame"><h2>{res["title"]}</h2><p>{analysis}</p></div>', unsafe_allow_html=True)
-
-    with tab2:
-        st.subheader("Neural Production Studio")
-        url_d = st.text_input("Enter URL to Dub")
-        l_d = st.selectbox("Target Dub Language", ["Tamil", "English", "Hindi"])
-        if st.button("Start Neural Overdub"):
-            res = decrypt_resource(url_d)
-            if res:
-                with st.spinner("Processing..."):
-                    dub_file = execute_dub(res, l_d, "Executive")
-                    if dub_file:
-                        st.video(dub_file)
-                        with open(dub_file, "rb") as f:
-                            st.download_button("📥 DOWNLOAD", f, f"Dubbed_{res['fid']}.mp4")
+    
+    url = st.text_input("Enter YouTube Link to Interpret", placeholder="Paste Video Link Here")
+    
+    c1, c2 = st.columns(2)
+    with c1: target_lang = st.selectbox("Target Dubbing Language", ["Tamil", "English", "Hindi", "French"])
+    with c2: persona = st.selectbox("🎙️ Voice Persona", ["Male Executive", "Female Executive"])
+    
+    if st.button("START NEURAL INTERPRETATION", use_container_width=True):
+        if url:
+            with st.status("Extracting Intelligence...") as status:
+                intel = extract_intelligence(url)
+                if intel:
+                    status.update(label=f"Synthesizing {target_lang} Voice ({intel['mode']})...", state="running")
+                    audio_path = generate_dub_audio(intel, target_lang, persona)
+                    
+                    if audio_path:
+                        status.update(label="Interpretation Ready.", state="complete")
+                        st.markdown(f'''<div class="interpreter-card">
+                            <h3>🎙️ {target_lang} Neural Dub ({persona})</h3>
+                            <p><b>Video:</b> {intel['title']}</p>
+                            <div class="tackyon-seal">Tackyon Interpreter © 2026</div>
+                        </div>''', unsafe_allow_html=True)
+                        
+                        st.audio(audio_path)
+                        st.success("You can now play this audio while watching the original video.")
+                        
+                        with open(audio_path, "rb") as f:
+                            st.download_button("📥 DOWNLOAD DUBBED AUDIO (MP3)", f, f"Dub_{intel['id']}.mp3")
+                else:
+                    st.error("Access Restricted: YouTube is blocking the server IP.")
