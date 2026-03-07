@@ -95,7 +95,8 @@ def generate_ai_content(prompt_text):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Using 1.5 Flash for the "Brain"
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e:
@@ -165,7 +166,6 @@ else:
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
     
-    # NEW NAVIGATION MENU
     app_mode = st.sidebar.selectbox("Choose Mode", ["Intelligence Hub", "Universal Dubbing Studio"])
     
     st.sidebar.divider()
@@ -201,7 +201,9 @@ else:
     elif app_mode == "Universal Dubbing Studio":
         st.title("Universal Dubbing Studio")
         st.write("Translate any video audio into a new voice instantly.")
-                dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
+        
+        # INDENTATION FIXED HERE
+        dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
         lang_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te", "Kannada": "kn", "French": "fr", "German": "de"}
         target_lang = st.selectbox("Select Dubbing Language", list(lang_map.keys()))
         
