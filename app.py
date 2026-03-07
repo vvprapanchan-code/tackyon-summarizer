@@ -29,14 +29,9 @@ st.markdown("""
     .kural-line2 { font-size: 1.3em; color: #5D6D7E; font-style: italic; }
 
     .executive-card {
-        background: white; 
-        padding: 45px; 
-        border-radius: 25px;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.12); 
-        border-top: 8px solid #1B2631;
-        text-align: center; 
-        max-width: 900px; 
-        margin: auto;
+        background: white; padding: 45px; border-radius: 25px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.12); border-top: 8px solid #1B2631;
+        text-align: center; max-width: 900px; margin: auto;
     }
 
     @keyframes t-pulse {
@@ -47,19 +42,20 @@ st.markdown("""
     .pulse-layer { animation: t-pulse 2.5s infinite ease-in-out; }
 
     .analysis-result {
-        background: #F8F9F9; 
-        padding: 30px; 
-        border-radius: 18px;
-        border-left: 10px solid #1B2631; 
-        text-align: left;
-        margin-top: 25px; 
-        color: #1C2833; 
-        line-height: 1.8;
+        background: #F8F9F9; padding: 30px; border-radius: 18px;
+        border-left: 10px solid #1B2631; text-align: left;
+        margin-top: 25px; color: #1C2833; line-height: 1.8;
+    }
+
+    /* History Item Sidebar Style */
+    .history-card {
+        background: #EBEDEF; padding: 10px; border-radius: 10px;
+        margin-bottom: 10px; border-left: 4px solid #D4AC0D;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGO ENGINE ---
+# --- 2. LOGO ENGINE (ROBUST) ---
 def load_logo_proven():
     try:
         search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
@@ -81,7 +77,7 @@ def render_t_logo(size="100px", animate=False):
     else:
         st.markdown(f'<div style="text-align: center; font-size: 35px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
 
-# --- 3. DATABASE ENGINE ---
+# --- 3. DATABASE ENGINE (KURAL) ---
 def get_random_kural():
     try:
         if os.path.exists("thirukural.json"):
@@ -91,7 +87,7 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 4. INTELLIGENCE ENGINE ---
+# --- 4. INTELLIGENCE ENGINE (LONG-FORM) ---
 def get_video_data(url):
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
@@ -102,6 +98,8 @@ def get_video_data(url):
                 "channel": info.get('uploader', 'Independent Creator'),
                 "subs": info.get('subscriber_count', 'N/A'),
                 "likes": info.get('like_count', 'N/A'),
+                "thumbnail": info.get('thumbnail', ''),
+                "url": url,
                 "description": info.get('description', '')[:1200]
             }
             try:
@@ -115,12 +113,12 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        long_instr = "IMPORTANT: Provide an extremely long, exhaustive, and highly detailed analysis. Do not be brief."
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        long_instr = "IMPORTANT: Provide an extremely long, exhaustive, and highly detailed analysis."
         if mode == "meta_only":
-            prompt = f"Act as a Brand Expert. {long_instr} No transcript available. Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a {style} in {lang}."
+            prompt = f"Act as a Brand Expert. {long_instr} No transcript. Based on Title: {metadata['title']}, provide a {style} in {lang}."
         else:
-            prompt = f"Act as an Executive Analyst. {long_instr} Analyze this transcript: {transcript}. Provide a professional and deep {style} in {lang} language."
+            prompt = f"Act as an Executive Analyst. {long_instr} Analyze this transcript: {transcript}. Provide a deep {style} in {lang}."
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -130,25 +128,18 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
+    st.session_state.history = [] # Initialize History Storage
 
-# STAGE 1: LOGO ANIMATION (WITH MANUAL OVERRIDE)
+# STAGE 1: LOGO ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
-    
-    # Progress container to show time is moving
     progress_bar = st.progress(0)
-    for percent_complete in range(100):
+    for p in range(100):
         time.sleep(0.02)
-        progress_bar.progress(percent_complete + 1)
-    
-    # FORCE CHANGE
+        progress_bar.progress(p + 1)
     st.session_state.flow_stage = "onboarding"
-    
-    # Manual bypass button in case the automatic rerun fails
-    if st.button("Enter Portal", use_container_width=True):
-        st.rerun()
-    
+    if st.button("Enter Portal", use_container_width=True): st.rerun()
     time.sleep(0.5)
     st.rerun()
 
@@ -158,10 +149,10 @@ elif st.session_state.flow_stage == "onboarding":
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     render_t_logo(size="100px") 
     st.title("Executive Identification")
-    col1, col2, col3 = st.columns(3)
-    with col1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with col2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3: u_age = st.number_input("Age", 18, 99, 19)
+    c1, c2, c3 = st.columns(3)
+    with c1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
+    with c2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
+    with c3: u_age = st.number_input("Age", 18, 99, 19)
     if st.button("Initialize System", use_container_width=True):
         if u_name:
             st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
@@ -180,19 +171,35 @@ elif st.session_state.flow_stage == "gateway":
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 4: MAIN HUB
+# STAGE 4: MAIN HUB (WITH SIDEBAR HISTORY)
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    render_t_logo(size="150px") 
+    render_t_logo(size="130px") 
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
+    
+    # HISTORY SECTION IN SIDEBAR
+    st.sidebar.markdown("### 🕒 Intelligence History")
+    if not st.session_state.history:
+        st.sidebar.write("No history recorded yet.")
+    else:
+        for item in reversed(st.session_state.history): # Show latest first
+            st.sidebar.markdown(f"""
+            <div class="history-card">
+                <b>{item['title'][:40]}...</b><br>
+                <small>Channel: {item['channel']}</small><br>
+                <a href="{item['url']}" target="_blank">View Video</a>
+            </div>
+            """, unsafe_allow_html=True)
+    
     st.title("Executive Intelligence Hub")
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
         with c1: lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
-        with c2: style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
+        with c2: style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Actionable Deep Dive"])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
+        
         if st.button("Execute Deep Analysis", use_container_width=True):
             if url:
                 with st.spinner("Decrypting Intelligence..."):
@@ -202,4 +209,10 @@ else:
                         st.markdown(f"### 📑 Analysis Report: {m['title']}")
                         st.markdown(f"**Channel:** {m['channel']} | **Authority:** {m['subs']} Subs | **Engagement:** {m['likes']} Likes")
                         res = generate_ai_analysis(t, m, style, lang, mode)
-                        st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
+                        
+                        # SAVE TO HISTORY
+                        if not any(h['url'] == url for h in st.session_state.history):
+                            st.session_state.history.append({"title": m['title'], "channel": m['channel'], "url": url})
+                        
+                        st.markdown(f'<div class="analysis-result"><b>{style} Results ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
+            else: st.warning("Please provide a valid YouTube Link.")
