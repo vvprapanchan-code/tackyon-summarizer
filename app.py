@@ -81,14 +81,12 @@ def load_logo_proven():
     Supports specific Tackyon filenames.
     """
     try:
-        # Check for specific files detected in your environment
         search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
         for f in search_list:
             if os.path.exists(f):
                 with open(f, "rb") as img_file:
                     return base64.b64encode(img_file.read()).decode()
         
-        # Fallback for generic image files
         for file in os.listdir("."):
             if file.lower().endswith((".png", ".jpg", ".jpeg")):
                 with open(file, "rb") as img_file:
@@ -122,7 +120,6 @@ def get_random_kural():
                 return random.choice(db)
     except Exception as e:
         pass
-    # Professional fallback verse
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
 # --- 4. THE INTELLIGENCE ENGINE (SECURED) ---
@@ -146,7 +143,6 @@ def get_video_data(url):
                 transcript_text = " ".join([t['text'] for t in transcript_list])
                 return metadata, transcript_text, "full"
             except:
-                # Meta-only mode for music/shorts
                 return metadata, None, "meta_only"
     except Exception as e:
         return None, None, "error"
@@ -154,24 +150,15 @@ def get_video_data(url):
 def generate_ai_analysis(transcript, metadata, style, lang, mode):
     """Generates AI insights using SECURE Streamlit secrets."""
     try:
-        # SECURE CONFIGURATION
+        # SECURE CONFIGURATION: Pulls the new key from your vault
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         if mode == "meta_only":
-            prompt = f"""
-            Act as a Strategic Brand Consultant. This content has no transcript (Music/Short). 
-            Based on Title: {metadata['title']} and Description: {metadata['description']}, 
-            provide a {style} in {lang} language. 
-            Analyze the creative impact and channel authority.
-            """
+            prompt = f"Act as a Strategic Brand Consultant. This content has no transcript (Music/Short). Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a {style} in {lang} language."
         else:
-            prompt = f"""
-            Act as an Executive Intelligence Officer. Analyze this transcript: {transcript}. 
-            Provide a world-class {style} in the {lang} language. 
-            Focus on strategic takeaways and actionable wisdom.
-            """
+            prompt = f"Act as an Executive Intelligence Officer. Analyze this transcript: {transcript}. Provide a professional {style} in the {lang} language."
         
         response = model.generate_content(prompt)
         return response.text
@@ -183,7 +170,7 @@ if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
 
-# STAGE 1: LOGO ANIMATION (Every startup)
+# STAGE 1: LOGO ANIMATION (Startup)
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
@@ -245,16 +232,10 @@ else:
     
     st.title("Executive Intelligence Hub")
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
-        url_input = st.text_input("Resource URL", placeholder="Paste YouTube Link (Vlogs, Music, or Shorts)")
+        url_input = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
-        with c1: intelligence_lang = st.selectbox("Intelligence Language", [
-            "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", 
-            "French", "German", "Spanish", "Japanese", "Chinese"
-        ])
-        with c2: intelligence_style = st.selectbox("Output Style", [
-            "Executive Summary", "Strategic Points", "Exam Point of View", 
-            "Twitter Thread", "Threads Post", "Actionable Steps"
-        ])
+        with c1: intelligence_lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
+        with c2: intelligence_style = st.selectbox("Output Style", ["Executive Summary", "Strategic Points", "Exam Point of View", "Twitter Thread", "Threads Post", "Actionable Steps"])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
