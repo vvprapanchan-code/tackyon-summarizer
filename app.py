@@ -109,7 +109,7 @@ def generate_dub_audio(intel_data, lang, persona):
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         # Using Gemini 3 Flash for the 2026 Sovereign Engine
-        brain = genai.GenerativeModel('gemini-3-flash')
+        brain = genai.GenerativeModel('gemini-2.5-flash')
         
         # Create a professional script for the voice
         script_prompt = f"Convert this text into a flowing, professional {persona} dubbing script in {lang}. Return ONLY the script: {intel_data['content'][:5000]}"
