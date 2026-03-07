@@ -1,7 +1,6 @@
 # ==============================================================================
-# TACKYON AI: DEDICATED NEURAL DUBBING STUDIO (BUILD 2026.03.07)
-# CORE MODEL: GEMINI 3 FLASH
-# OBJECTIVE: VIDEO-AUDIO MULTIPLEXING VIA FFMPEG
+# TACKYON AI: ULTIMATE SOVEREIGN SUITE (BUILD 2026.03.07)
+# FIXES: AUDIO ENGINE, YOUTUBE ACCESS, & DIRECTORY ERRORS
 # ==============================================================================
 
 import streamlit as st
@@ -17,173 +16,133 @@ from gtts import gTTS
 import subprocess
 from datetime import datetime
 
-# --- STAGE 0: PYTHON 3.13 AUDIO ENGINE RESTORATION ---
+# --- STAGE 0: THE AUDIO BRIDGE (FIXES PYAUDIOOP ERROR) ---
 try:
     import audioop
 except ImportError:
     try:
         import audioop_lts as audioop
+        # This line is the "Bridge" that pydub needs
+        import sys
+        sys.modules['audioop'] = audioop 
     except ImportError:
-        st.error("Protocol Error: 'audioop-lts' missing in requirements.txt.")
+        st.error("Protocol Error: audioop-lts not found in environment.")
 
 from pydub import AudioSegment
 
-# --- STAGE 1: SYSTEM ENVIRONMENT & BRANDING ---
-st.set_page_config(page_title="Tackyon Dubbing Studio", page_icon="🎙️", layout="wide")
+# --- STAGE 1: AUTO-INITIALIZATION (FIXES FILENOTFOUND) ---
+def initialize_system():
+    # Automatically creates these folders so the app never crashes
+    for folder in ['temp', 'exports', 'logs', 'assets']:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+initialize_system()
+
+# --- STAGE 2: EXECUTIVE STYLING ---
+st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
 st.markdown("""
     <style>
     header, [data-testid="stHeader"], .stAppHeader { display: none !important; }
     .block-container { padding-top: 0px !important; margin-top: -20px !important; }
-    
-    .wisdom-frame {
-        background: #FFFFFF; border-bottom: 5px solid #D4AC0D; padding: 30px;
-        text-align: center; width: 100%; margin-bottom: 40px; border-radius: 0 0 40px 40px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    }
-    .wisdom-top { font-size: 1.7em; font-weight: 800; color: #1B2631; }
-
-    .id-portal {
-        background: white; padding: 50px; border-radius: 30px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.1); border-top: 10px solid #1B2631;
-        text-align: center; max-width: 900px; margin: 40px auto;
-    }
-
-    .dubbing-card {
-        background: #FFFFFF; padding: 40px; border-radius: 20px;
-        border-left: 15px solid #1B2631; position: relative;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.05); margin-top: 30px;
-    }
-    
-    .tackyon-seal {
-        position: absolute; bottom: 15px; right: 25px; font-size: 0.8em;
-        color: rgba(27, 38, 49, 0.3); font-weight: 900; letter-spacing: 2px;
-    }
+    .wisdom-frame { background: white; border-bottom: 5px solid #D4AC0D; padding: 40px; text-align: center; border-radius: 0 0 40px 40px; }
+    .wisdom-top { font-size: 1.8em; font-weight: 900; color: #1B2631; }
+    .report-frame { background: #FFFFFF; padding: 50px; border-radius: 30px; border-left: 15px solid #1B2631; box-shadow: 0 15px 45px rgba(0,0,0,0.05); }
     </style>
     """, unsafe_allow_html=True)
 
-def initialize_vaults():
-    """Ensures media directories exist to prevent FileNotFoundError."""
-    for d in ['temp', 'exports', 'assets']:
-        if not os.path.exists(d): os.makedirs(d)
-
-def load_identity():
-    """Retrieves official Tackyon band image."""
-    for f in ["logo.jpg", "logo.png", "t_symbol.jpg"]:
-        if os.path.exists(f):
-            with open(f, "rb") as i: return base64.b64encode(i.read()).decode()
-    return None
-
-IDENTITY_B64 = load_identity()
-initialize_vaults()
-
-# --- STAGE 2: STEALTH MEDIA PIPELINE ---
-
-def extract_media_stealth(url):
-    """Downloads video stream and extracts speech data."""
+# --- STAGE 3: STEALTH DOWNLOAD ENGINE (FIXES 403 ERROR) ---
+def decrypt_resource(url):
     try:
         fid = int(time.time())
-        # Stealth Agent to bypass 2026 YouTube blocks
+        # Stealth Headers: Tells YouTube we are a human on Chrome
         ydl_opts = {
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]', 
-            'outtmpl': f'temp/vid_{fid}.mp4',
+            'outtmpl': f'temp/raw_{fid}.mp4',
             'quiet': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'referer': 'https://www.youtube.com/'
         }
-        
         with YoutubeDL(ydl_opts) as ydl:
             meta = ydl.extract_info(url, download=True)
-            vid_id = meta['id']
+            vid = meta['id']
             
         try:
-            raw_t = YouTubeTranscriptApi.get_transcript(vid_id)
+            raw_t = YouTubeTranscriptApi.get_transcript(vid)
             content = " ".join([e['text'] for e in raw_t])
         except:
             content = f"Title: {meta.get('title')}. Description: {meta.get('description', 'N/A')}"
             
-        return {"title": meta['title'], "path": f'temp/vid_{fid}.mp4', "data": content, "fid": fid}
+        return {"title": meta['title'], "path": f'temp/raw_{fid}.mp4', "data": content, "fid": fid}
     except Exception as e:
-        st.error(f"Access Denied: {str(e)}")
+        st.error(f"Access Denied (403): YouTube is blocking Streamlit. {str(e)}")
         return None
 
-# --- STAGE 3: PRODUCTION & MERGE ---
-
-def run_neural_dub(res, lang, persona):
-    """Mutes original video and merges AI voice using FFmpeg."""
+# --- STAGE 4: PRODUCTION STUDIO ---
+def execute_dub(res, lang, persona):
     try:
         fid = res['fid']
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        brain = genai.GenerativeModel('gemini-3-flash')
+        model = genai.GenerativeModel('gemini-3-flash')
         
-        # Script generation for zero-error neural voice
-        p = f"Translate this into a natural {persona} voice-over script in {lang}: {res['data'][:4500]}"
-        script = brain.generate_content(p).text
+        # Script preparation
+        script = model.generate_content(f"Create a natural dubbing script in {lang}: {res['data'][:4000]}").text
         
         l_map = {"Tamil": "ta", "English": "en", "Hindi": "hi"}
         voice = gTTS(text=script, lang=l_map.get(lang, "en"), slow=False)
         v_path = f"temp/v_{fid}.mp3"
         voice.save(v_path)
         
-        out_path = f"exports/Tackyon_Studio_{fid}.mp4"
-        # FFmpeg: -an (mute original) | -map (add video + new audio)
-        cmd = ['ffmpeg', '-i', res['path'], '-i', v_path, '-c:v', copy, '-c:a', 'aac', 
-               '-map', '0:v:0', '-map', '1:a:0', '-shortest', out_path, '-y']
-        
-        # Note: Fixed 'copy' to be a string below in the real execution
-        cmd[7] = 'copy' 
+        out = f"exports/Tackyon_{fid}.mp4"
+        # Mute original and merge AI voice
+        cmd = ['ffmpeg', '-i', res['path'], '-i', v_path, '-c:v', 'copy', '-c:a', 'aac', 
+               '-map', '0:v:0', '-map', '1:a:0', '-shortest', out, '-y']
         subprocess.run(cmd, capture_output=True)
-        return out_path
+        return out
     except: return None
 
-# --- STAGE 4: EXECUTIVE FLOW ---
+# --- STAGE 5: WORKFLOW ---
+if "kernel" not in st.session_state:
+    st.session_state.kernel = {"stage": "boot", "user": None}
 
-if "studio_state" not in st.session_state:
-    st.session_state.studio_state = {"stage": "identification", "user": None}
-
-if st.session_state.studio_state["stage"] == "identification":
-    st.markdown('<div class="id-portal">', unsafe_allow_html=True)
-    if IDENTITY_B64:
-        st.markdown(f'<img src="data:image/jpeg;base64,{IDENTITY_B64}" width="100" style="border-radius:20px; margin-bottom:20px;">', unsafe_allow_html=True)
-    st.title("Tackyon Studio Access")
-    c1, c2, c3 = st.columns(3)
-    with c1: name = st.text_input("Name")
-    with c2: gen = st.selectbox("Gender", ["Male", "Female"])
-    with c3: age = st.number_input("Age", 18, 99, 21)
-    
-    if st.button("AUTHORIZE STUDIO"):
-        if name:
-            st.session_state.studio_state["user"] = {"name": name}
-            st.session_state.studio_state["stage"] = "hub"
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+if st.session_state.kernel["stage"] == "boot":
+    st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
+    st.title("TACKYON AI")
+    p = st.progress(0)
+    for i in range(100):
+        time.sleep(0.01)
+        p.progress(i + 1)
+    st.session_state.kernel["stage"] = "hub"
+    st.rerun()
 
 else:
-    st.markdown('<div class="wisdom-frame"><div class="wisdom-top">Neural Dubbing Studio</div></div>', unsafe_allow_html=True)
-    st.title(f"Studio Executive: {st.session_state.studio_state['user']['name']}")
+    st.markdown('<div class="wisdom-frame"><div class="wisdom-top">Sovereign Intelligence Suite</div></div>', unsafe_allow_html=True)
     
-    url = st.text_input("YouTube Target URL", placeholder="Paste Resource Link Here")
-    col1, col2, col3 = st.columns(3)
-    with col1: target_lang = st.selectbox("Dubbing Language", ["Tamil", "English", "Hindi"])
-    with col2: persona = st.selectbox("🎙️ Voice Persona", ["Male Executive", "Female Executive"])
-    with col3: start_btn = st.button("START NEURAL OVERDUB", use_container_width=True)
+    tab1, tab2 = st.tabs(["🔍 Intelligence Summary", "🎙️ Universal Dubbing Studio"])
+    
+    with tab1:
+        st.subheader("Deep Intelligence Extraction")
+        url_s = st.text_input("Enter Video URL")
+        l_s = st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi"])
+        if st.button("Execute Deep Analysis"):
+            res = decrypt_resource(url_s)
+            if res:
+                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                model = genai.GenerativeModel('gemini-3-flash')
+                analysis = model.generate_content(f"Exhaustive analysis in {l_s} for: {res['data'][:6000]}").text
+                st.markdown(f'<div class="report-frame"><h2>{res["title"]}</h2><p>{analysis}</p></div>', unsafe_allow_html=True)
 
-    if start_btn:
-        if url:
-            with st.status("Initializing Neural Production...") as status:
-                
-                res = extract_media_stealth(url)
-                if res:
-                    status.update(label="Synthesizing AI Voice & Merging Media...", state="running")
-                    final_vid = run_neural_dub(res, target_lang, persona)
-                    
-                    if final_vid:
-                        status.update(label="Production Complete.", state="complete")
-                        st.markdown(f'''<div class="dubbing-card">
-                            <h3>📽️ Dubbed Playback ({target_lang})</h3>
-                            <div class="tackyon-seal">Tackyon Studio © 2026</div>
-                        </div>''', unsafe_allow_html=True)
-                        st.video(final_vid)
-                        with open(final_vid, "rb") as f:
-                            st.download_button("📥 DOWNLOAD DUBBED VIDEO", f, f"Dubbed_{res['fid']}.mp4")
-                    else: st.error("Merge Failure: Verify FFmpeg is installed in packages.txt.")
-                else: st.error("Access Restricted: YouTube is blocking this link.")
+    with tab2:
+        st.subheader("Neural Production Studio")
+        url_d = st.text_input("Enter URL to Dub")
+        l_d = st.selectbox("Target Dub Language", ["Tamil", "English", "Hindi"])
+        if st.button("Start Neural Overdub"):
+            res = decrypt_resource(url_d)
+            if res:
+                with st.spinner("Processing..."):
+                    dub_file = execute_dub(res, l_d, "Executive")
+                    if dub_file:
+                        st.video(dub_file)
+                        with open(dub_file, "rb") as f:
+                            st.download_button("📥 DOWNLOAD", f, f"Dubbed_{res['fid']}.mp4")
