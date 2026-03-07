@@ -3,6 +3,7 @@ import time
 import base64
 import os
 import random
+import json
 
 # --- 1. THEME & DYNAMIC HEADER ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
@@ -49,21 +50,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE PROVEN LOGO ENGINE (ANALYZED FROM PREVIOUS SUCCESS) ---
+# --- 2. THE PROVEN LOGO ENGINE ---
 def load_logo_proven():
     """
     Scans the folder for logo.jpg or any image file. 
-    This is the exact method that worked previously.
+    Matches your folder structure: logo.jpg.
     """
     try:
-        # 1. Search for specific names we know exist
         search_list = ["logo.jpg", "tackyon logo", "logo.jpeg", "tackyon logo jpeg"]
         for f in search_list:
             if os.path.exists(f):
                 with open(f, "rb") as img_file:
                     return base64.b64encode(img_file.read()).decode()
         
-        # 2. Fallback: Scan entire folder for ANY image if names don't match
         for file in os.listdir("."):
             if file.lower().endswith((".png", ".jpg", ".jpeg")):
                 with open(file, "rb") as img_file:
@@ -75,7 +74,6 @@ def load_logo_proven():
 logo_b64 = load_logo_proven()
 
 def render_t_logo(size="100px", animate=False):
-    """Renders the metallic logo using the analyzed stable method."""
     if logo_b64:
         anim_class = "pulse-layer" if animate else ""
         st.markdown(
@@ -85,22 +83,28 @@ def render_t_logo(size="100px", animate=False):
             unsafe_allow_html=True
         )
     else:
-        # Branded text fallback if file is truly missing
         st.markdown(f'<div style="text-align: center; font-size: 30px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
 
-# Strict 4-3 Word Format for Kural
-KURALS = [
-    {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"},
-    {"top": "அகர முதல எழுத்தெல்லாம் ஆதி", "bottom": "பகவன் முதற்றே உலகு"},
-    {"top": "அன்பிலார் எல்லாம் தமக்குரியர் அன்புடையார்", "bottom": "என்பும் உரியர் பிறர்க்கு"}
-]
+# --- 3. DATABASE ENGINE (ACCESSING YOUR UPLOADED JSON) ---
+def get_random_kural():
+    """Loads a random Kural from the thirukural.json you uploaded."""
+    try:
+        # Check if the file exists in your main folder
+        if os.path.exists("thirukural.json"):
+            with open("thirukural.json", "r", encoding="utf-8") as f:
+                db = json.load(f)
+                return random.choice(db)
+    except Exception as e:
+        pass
+    # Safety Backup
+    return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 3. THE EXECUTIVE FLOW (EVERY FEATURE KEPT) ---
+# --- 4. THE EXECUTIVE FLOW (CUMULATIVE & UNCHANGED) ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
-    st.session_state.daily_kural = random.choice(KURALS)
+    st.session_state.daily_kural = get_random_kural()
 
-# STAGE 1: LOGO ANIMATION (Every opening)
+# STAGE 1: LOGO ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="350px", animate=True)
@@ -170,7 +174,6 @@ else:
                 "Arabic", "Portuguese", "Italian", "Korean", "Turkish", "Dutch"
             ])
         with c2: 
-            # ADDED NEW OUTPUT STYLES HERE
             st.selectbox("Output Style", [
                 "Executive Summary", "Strategic Points", "Exam Point of View", 
                 "Twitter (X) Thread", "Threads Post", "Actionable Steps", "Detailed Notes"
