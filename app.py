@@ -95,7 +95,7 @@ def generate_ai_content(prompt_text):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e:
@@ -119,7 +119,6 @@ if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
     st.session_state.history = []
-    st.session_state.current_page = "hub"
 
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
@@ -160,11 +159,15 @@ elif st.session_state.flow_stage == "gateway":
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
+    # --- NAVIGATION & HISTORY SIDEBAR ---
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="130px") 
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
-    page = st.sidebar.radio("Navigate", ["Intelligence Hub", "Universal Dubbing Studio"])
+    
+    # NEW NAVIGATION MENU
+    app_mode = st.sidebar.selectbox("Choose Mode", ["Intelligence Hub", "Universal Dubbing Studio"])
+    
     st.sidebar.divider()
     st.sidebar.markdown("### 🕒 Intelligence History")
     if not st.session_state.history:
@@ -173,7 +176,7 @@ else:
         for item in reversed(st.session_state.history):
             st.sidebar.markdown(f'<div class="history-card"><b>{item["title"][:40]}...</b><br><a href="{item["url"]}" target="_blank">View Video</a></div>', unsafe_allow_html=True)
 
-    if page == "Intelligence Hub":
+    if app_mode == "Intelligence Hub":
         st.title("Executive Intelligence Hub")
         with st.expander("📥 Primary Resource Acquisition", expanded=True):
             url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
@@ -195,11 +198,10 @@ else:
                                 st.session_state.history.append({"title": m['title'], "url": url})
                             st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
 
-    else:
+    elif app_mode == "Universal Dubbing Studio":
         st.title("Universal Dubbing Studio")
         st.write("Translate any video audio into a new voice instantly.")
-        
-        dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
+                dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
         lang_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te", "Kannada": "kn", "French": "fr", "German": "de"}
         target_lang = st.selectbox("Select Dubbing Language", list(lang_map.keys()))
         
