@@ -9,16 +9,16 @@ from yt_dlp import YoutubeDL
 from youtube_transcript_api import YouTubeTranscriptApi
 from gtts import gTTS
 
-# --- PYTHON 3.13 AUDIO ENGINE FIX ---
+# --- PYTHON 3.13 AUDIO ENGINE PATCH ---
 try:
     import audioop
 except ImportError:
     import audioop_lts as audioop
-# -------------------------------------------------------------
+# ----------------------------------------------------------------
 
 from pydub import AudioSegment
 
-# --- 1. THEME & EXECUTIVE ARCHITECTURE (PROTECTED) ---
+# --- 1. THEME & EXECUTIVE INTERFACE ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
 st.markdown("""
@@ -36,16 +36,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGO & DATA ENGINES ---
+# --- 2. LOGO & DATA LOADER ---
 def load_logo_proven():
     try:
-        search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
-        for f in search_list:
+        for f in ["logo.jpg", "logo.jpg.jpeg", "logo.jpeg"]:
             if os.path.exists(f):
                 with open(f, "rb") as img_file: return base64.b64encode(img_file.read()).decode()
-        for file in os.listdir("."):
-            if file.lower().endswith((".png", ".jpg", ".jpeg")):
-                with open(file, "rb") as img_file: return base64.b64encode(img_file.read()).decode()
     except: return None
     return None
 
@@ -67,22 +63,13 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 3. INTELLIGENCE & DUBBING ENGINES ---
+# --- 3. AI & DUBBING CORE ---
 def get_video_data(url):
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            metadata = {
-                "title": info.get('title', 'Unknown Resource'),
-                "channel": info.get('uploader', 'Independent Creator'),
-                "subs": info.get('subscriber_count', 'N/A'),
-                "likes": info.get('like_count', 'N/A'),
-                "thumbnail": info.get('thumbnail', ''),
-                "url": url,
-                "id": info['id'],
-                "description": info.get('description', '')[:1200]
-            }
+            metadata = {"title": info.get('title', 'Resource'), "url": url, "id": info['id']}
             try:
                 transcript_list = YouTubeTranscriptApi.get_transcript(info['id'])
                 transcript = " ".join([t['text'] for t in transcript_list])
@@ -94,129 +81,94 @@ def generate_ai_content(prompt_text):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        # Using 1.5 Flash for Executive Processing
+        # Using 1.5 Flash for the "Brain"
         model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e: return f"Error: {str(e)}"
 
-def run_auto_dubbing(transcript, target_lang_code):
+def run_auto_dubbing(transcript, lang_code):
     try:
         if not os.path.exists("temp"): os.makedirs("temp")
-        translate_prompt = f"Translate this text perfectly to the language with code '{target_lang_code}'. Only return the translated text: {transcript}"
-        translated_text = generate_ai_content(translate_prompt)
-        tts = gTTS(text=translated_text, lang=target_lang_code, slow=False)
-        dub_path = f"temp/dubbed_{int(time.time())}.mp3"
-        tts.save(dub_path)
-        return dub_path
-    except Exception as e: return None
+        trans_p = f"Translate this text perfectly to language code '{lang_code}': {transcript}"
+        translated = generate_ai_content(trans_p)
+        tts = gTTS(text=translated, lang=lang_code, slow=False)
+        path = f"temp/dub_{int(time.time())}.mp3"
+        tts.save(path)
+        return path
+    except: return None
 
-# --- 4. THE EXECUTIVE WORKFLOW ---
+# --- 4. NAVIGATION FLOW ---
 if "flow_stage" not in st.session_state:
-    st.session_state.flow_stage = "animation"
-    st.session_state.daily_kural = get_random_kural()
-    st.session_state.history = []
+    st.session_state.update({"flow_stage": "animation", "history": [], "daily_kural": get_random_kural()})
 
-# STAGE 1: LOGO ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
-    progress_bar = st.progress(0)
+    pb = st.progress(0)
     for p in range(100):
         time.sleep(0.02)
-        progress_bar.progress(p + 1)
+        pb.progress(p + 1)
     st.session_state.flow_stage = "onboarding"
-    if st.button("Enter Portal", use_container_width=True): st.rerun()
-    time.sleep(0.5)
     st.rerun()
 
-# STAGE 2: ONBOARDING
 elif st.session_state.flow_stage == "onboarding":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="100px") 
+    render_t_logo(size="100px")
     st.title("Executive Identification")
-    c1, c2, c3 = st.columns(3)
-    with c1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with c2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with c3: u_age = st.number_input("Age", 18, 99, 19)
-    if st.button("Initialize System", use_container_width=True):
-        if u_name:
-            st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
-            st.session_state.flow_stage = "gateway"
+    name = st.text_input("Name")
+    gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
+    age = st.number_input("Age", 18, 99, 19)
+    if st.button("Initialize System"):
+        if name:
+            st.session_state.user = {"name": name, "gender": gender, "age": age}
+            st.session_state.flow_stage = "hub"
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 3: GATEWAY
-elif st.session_state.flow_stage == "gateway":
-    st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="90px")
-    st.info(f"Identity Verified: Executive {st.session_state.user['name']}.")
-    if st.button("Enter Intelligence Hub", use_container_width=True):
-        st.session_state.flow_stage = "hub"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# STAGE 4: HUB & NAVIGATION STUDIO
 else:
-    # --- SIDEBAR MENU ---
-    st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    render_t_logo(size="130px") 
-    st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
-    st.sidebar.divider()
-    
-    # NAVIGATION DROPDOWN
-    app_mode = st.sidebar.selectbox("Choose Mode", ["Intelligence Hub", "Universal Dubbing Studio"])
-    
-    st.sidebar.divider()
-    st.sidebar.markdown("### 🕒 Intelligence History")
-    if not st.session_state.history:
-        st.sidebar.write("No history recorded.")
-    else:
+    # --- SIDEBAR CONTROL CENTER ---
+    with st.sidebar:
+        render_t_logo(size="120px")
+        st.markdown(f"### Executive: {st.session_state.user['name']}")
+        st.divider()
+        # Page Selection
+        mode = st.selectbox("🎯 SELECT MODE", ["Intelligence Hub", "Universal Dubbing Studio"])
+        st.divider()
+        st.markdown("### 🕒 Recent History")
         for item in reversed(st.session_state.history):
-            st.sidebar.markdown(f'<div class="history-card"><b>{item["title"][:40]}...</b><br><a href="{item["url"]}" target="_blank">View Video</a></div>', unsafe_allow_html=True)
+            st.sidebar.markdown(f'<div class="history-card"><b>{item["title"][:25]}...</b></div>', unsafe_allow_html=True)
 
-    # PAGE 1: INTELLIGENCE HUB
-    if app_mode == "Intelligence Hub":
+    # --- MAIN STAGE ---
+    if mode == "Intelligence Hub":
         st.title("Executive Intelligence Hub")
-        with st.expander("📥 Primary Resource Acquisition", expanded=True):
-            url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
-            c1, c2 = st.columns(2)
-            with c1: lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", "French", "German", "Spanish", "Japanese"])
-            with c2: style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
-            
-            if st.button("Execute Deep Analysis", use_container_width=True):
-                if url:
-                    with st.spinner("Decrypting Intelligence..."):
-                        m, t, mode = get_video_data(url)
-                        if mode == "error": st.error("Access denied to the provided URL.")
-                        else:
-                            st.markdown(f"### 📑 Analysis: {m['title']}")
-                            instr = "Provide an extremely long, exhaustive analysis. Do not be brief."
-                            prompt = f"Act as an Executive Analyst. {instr} Analyze: {t}. Style: {style} in {lang}."
-                            res = generate_ai_content(prompt)
-                            if not any(h['url'] == url for h in st.session_state.history):
-                                st.session_state.history.append({"title": m['title'], "url": url})
-                            st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
+        url = st.text_input("YouTube URL")
+        lang = st.selectbox("Analysis Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
+        style = st.selectbox("Summary Style", ["Comprehensive Long Summary", "Strategic Points", "Exam Prep"])
+        if st.button("Deep Analysis"):
+            with st.spinner("Analyzing..."):
+                m, t, res = get_video_data(url)
+                if res != "error":
+                    output = generate_ai_content(f"Provide a deep, exhaustive analysis in {lang} with {style} style for this text: {t}")
+                    if not any(h['title'] == m['title'] for h in st.session_state.history):
+                        st.session_state.history.append({"title": m['title']})
+                    st.markdown(f'<div class="analysis-result">{output}</div>', unsafe_allow_html=True)
 
-    # PAGE 2: DUBBING STUDIO
-    elif app_mode == "Universal Dubbing Studio":
+    elif mode == "Universal Dubbing Studio":
         st.title("Universal Dubbing Studio")
-        st.write("Translate any video audio into a new voice instantly.")
-        dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
-        lang_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te", "Kannada": "kn", "French": "fr", "German": "de"}
-        target_lang = st.selectbox("Select Dubbing Language", list(lang_map.keys()))
+        st.info("Translate Video Voice Instantly")
         
-        if st.button("Start Auto-Dubbing Engine", use_container_width=True):
-            if dub_url:
-                with st.spinner("Processing Voice Synthesis... This may take a minute."):
-                    m, t, mode = get_video_data(dub_url)
-                    if t:
-                        audio_file = run_auto_dubbing(t, lang_map[target_lang])
-                        if audio_file:
-                            st.success(f"Dubbing Complete! Listen to {m['title']} in {target_lang} below.")
-                            st.audio(audio_file)
-                            st.video(dub_url)
-                    else: st.error("No speech found in video to dub.")
-            else: st.warning("Please provide a video URL.")
+        dub_url = st.text_input("Video URL to Dub")
+        target_l = st.selectbox("Translate Voice To", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
+        l_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te", "Kannada": "kn"}
+        if st.button("Start Auto-Dubbing"):
+            with st.spinner("Dubbing Voice..."):
+                m, t, res = get_video_data(dub_url)
+                if t:
+                    audio = run_auto_dubbing(t, l_map[target_l])
+                    if audio:
+                        st.success("Dubbing Complete!")
+                        st.audio(audio)
+                        st.video(dub_url)
+                else: st.error("No speech found to dub.")
