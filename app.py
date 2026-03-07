@@ -125,7 +125,7 @@ def generate_ai_content(prompt_text):
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         # Using Gemini 1.5 Flash for the "Brain"
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e:
