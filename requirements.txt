@@ -4,3 +4,5 @@ supabase
 gTTS
 yt-dlp
 youtube-transcript-api
+moviepy
+pydub
