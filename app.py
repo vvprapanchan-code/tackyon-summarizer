@@ -163,7 +163,13 @@ else:
     with st.expander("📥 Primary Data Acquisition", expanded=True):
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
-        with c1: st.selectbox("Language", ["Tamil", "English", "Hindi"])
+        with c1: 
+            # ADDED ALL GLOBAL LANGUAGES HERE
+            st.selectbox("Intelligence Language", [
+                "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", 
+                "French", "German", "Spanish", "Japanese", "Chinese", "Russian", 
+                "Arabic", "Portuguese", "Italian", "Korean", "Turkish", "Dutch"
+            ])
         with c2: st.selectbox("Output Style", ["Summary", "Strategic Points"])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
