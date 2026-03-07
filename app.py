@@ -115,7 +115,7 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         long_instr = "IMPORTANT: Provide an extremely long, exhaustive, and highly detailed analysis. Do not be brief."
         if mode == "meta_only":
             prompt = f"Act as a Brand Expert. {long_instr} No transcript available. Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a {style} in {lang}."
