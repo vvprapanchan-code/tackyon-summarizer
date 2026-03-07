@@ -60,7 +60,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGO ENGINE (STABLE SCANNER) ---
+# --- 2. LOGO ENGINE ---
 def load_logo_proven():
     try:
         search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
@@ -82,7 +82,7 @@ def render_t_logo(size="100px", animate=False):
     else:
         st.markdown(f'<div style="text-align: center; font-size: 35px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
 
-# --- 3. DATABASE ENGINE (KURAL LOADER) ---
+# --- 3. DATABASE ENGINE (KURAL) ---
 def get_random_kural():
     try:
         if os.path.exists("thirukural.json"):
@@ -92,7 +92,7 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 4. INTELLIGENCE ENGINE (GLOBAL & SECURE) ---
+# --- 4. INTELLIGENCE ENGINE (SECURE & LONG) ---
 def get_video_data(url):
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
@@ -116,27 +116,33 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        
-        # KEPT YOUR SUCCESSFUL MODEL CHOICE
         model = genai.GenerativeModel('gemini-2.5-flash')
-        
         long_instr = "Provide an extremely long, exhaustive, and detailed analysis. Do not summarize briefly."
-        
         if mode == "meta_only":
             prompt = f"Act as a Brand Expert. {long_instr} No transcript available. Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a {style} in {lang}."
         else:
             prompt = f"Act as an Executive Analyst. {long_instr} Analyze this transcript: {transcript}. Provide a professional and deep {style} in {lang} language."
-        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Intelligence Hub Offline. Error: {str(e)}"
 
-# --- 5. THE EXECUTIVE WORKFLOW ---
-if "flow_stage" not in st.session_state:
-    st.session_state.flow_stage = "animation"
+# --- 5. THE EXECUTIVE WORKFLOW WITH MEMORY ---
+
+# CHECK IF USER IS ALREADY KNOWN (Permanent Memory Logic)
+if "user" not in st.session_state:
+    # Look for name in URL parameters (Simple Browser Memory)
+    params = st.query_params
+    if "exec_name" in params:
+        st.session_state.user = {"name": params["exec_name"], "gender": "Executive", "age": 25}
+        st.session_state.flow_stage = "hub"
+    else:
+        st.session_state.flow_stage = "animation"
+
+if "daily_kural" not in st.session_state:
     st.session_state.daily_kural = get_random_kural()
 
+# STAGE 1: ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
@@ -144,6 +150,7 @@ if st.session_state.flow_stage == "animation":
     st.session_state.flow_stage = "onboarding"
     st.rerun()
 
+# STAGE 2: ONBOARDING
 elif st.session_state.flow_stage == "onboarding":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -156,10 +163,13 @@ elif st.session_state.flow_stage == "onboarding":
     if st.button("Initialize", use_container_width=True):
         if u_name:
             st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
+            # SAVE TO BROWSER MEMORY
+            st.query_params["exec_name"] = u_name
             st.session_state.flow_stage = "gateway"
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# STAGE 3: GATEWAY
 elif st.session_state.flow_stage == "gateway":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -170,28 +180,24 @@ elif st.session_state.flow_stage == "gateway":
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# STAGE 4: MAIN HUB
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="150px") 
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
+    if st.sidebar.button("Logout / Reset Memory"):
+        st.query_params.clear()
+        st.session_state.clear()
+        st.rerun()
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
-        with c1: 
-            # EXPANDED GLOBAL LANGUAGE LIST
-            lang = st.selectbox("Intelligence Language", [
-                "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", "Marathi", "Bengali", "Gujarati", "Punjabi",
-                "French", "German", "Spanish", "Japanese", "Chinese (Simplified)", "Chinese (Traditional)", "Korean", 
-                "Russian", "Arabic", "Portuguese", "Italian", "Turkish", "Dutch", "Vietnamese", "Thai", "Indonesian",
-                "Malay", "Greek", "Hebrew", "Swedish", "Norwegian", "Danish", "Finnish", "Polish", "Hungarian", "Czech"
-            ])
-        with c2: 
-            style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
-        with c3: 
-            st.selectbox("Typography", ["Inter", "Arima"])
+        with c1: lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", "French", "German", "Spanish", "Japanese"])
+        with c2: style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
+        with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
             if url:
