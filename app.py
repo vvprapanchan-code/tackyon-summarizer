@@ -109,13 +109,12 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 3. DUBBING STUDIO ENGINE (FFMPEG MERGE) ---
-def get_video_and_audio(url):
+# --- 3. DUBBING STUDIO ENGINE (MEDIA MERGE) ---
+def get_video_and_data(url):
     try:
         if not os.path.exists("temp"): os.makedirs("temp")
         file_id = int(time.time())
         
-        # 1. Extraction of Video Metadata & Video File
         ydl_opts = {
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]', 
             'outtmpl': f'temp/video_{file_id}.mp4',
@@ -126,61 +125,57 @@ def get_video_and_audio(url):
             info = ydl.extract_info(url, download=True)
             video_title = info.get('title', 'Tackyon Dubbed Result')
             video_id = info['id']
+            description = info.get('description', 'No description available.')
             metadata = {
                 "title": video_title,
                 "channel": info.get('uploader', 'Independent Creator'),
                 "likes": info.get('like_count', 'N/A'),
-                "views": info.get('view_count', '0')
+                "description": description
             }
         
-        # 2. Transcription Retrieval
+        # Try transcript, fallback to description
         try:
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
             transcript = " ".join([t['text'] for t in transcript_list])
-            return metadata, transcript, f'temp/video_{file_id}.mp4', file_id
+            return metadata, transcript, f'temp/video_{file_id}.mp4', file_id, "transcript"
         except: 
-            return metadata, None, f'temp/video_{file_id}.mp4', file_id
+            return metadata, description, f'temp/video_{file_id}.mp4', file_id, "fallback"
             
     except Exception as e:
-        return None, None, None, None
+        return None, None, None, None, "error"
 
-def create_dubbed_video(video_path, transcript, lang_code, file_id, voice_type):
+def create_dubbed_video(video_path, content, lang_code, file_id, voice_type):
     try:
-        # 1. AI Script Generation (Avoids 0-sec audio errors)
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Process in chunks if extremely long
-        prompt = f"Convert this transcript into a natural, storytelling script in the language with code '{lang_code}'. The goal is a professional dubbing script: {transcript[:4500]}"
+        # Summarize to ensure the voice file is not too long or empty
+        prompt = f"Convert this content into a professional storytelling script in {lang_code}. Make it engaging: {content[:4000]}"
         dub_script = model.generate_content(prompt).text
         
-        # 2. Neural Speech Synthesis
+        # Generate Neural Speech
         tts = gTTS(text=dub_script, lang=lang_code, slow=False)
         audio_path = f"temp/audio_{file_id}.mp3"
         tts.save(audio_path)
         
-        # 3. Executive FFmpeg Merge (Mute Original + Overlay AI Voice)
+        # FFmpeg Merge: Mute original and add AI voice
         output_path = f"temp/Tackyon_Dubbed_{file_id}.mp4"
-        # -an mutes original audio; -map 0:v:0 takes original video; -map 1:a:0 takes new audio
         cmd = f"ffmpeg -i {video_path} -i {audio_path} -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest {output_path} -y"
         subprocess.run(cmd, shell=True)
         
         return output_path
-    except Exception as e:
-        st.error(f"Media Merge Error: {str(e)}")
+    except:
         return None
 
-# --- 4. THE EXECUTIVE WORKFLOW ---
+# --- 4. EXECUTIVE FLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.update({
         "flow_stage": "animation", 
         "history": [], 
-        "daily_kural": get_random_kural(),
-        "user": None
+        "daily_kural": get_random_kural()
     })
 
-# STAGE 1: BRAND ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
@@ -188,65 +183,44 @@ if st.session_state.flow_stage == "animation":
     for p in range(100):
         time.sleep(0.01)
         pb.progress(p + 1)
-    st.session_state.flow_stage = "onboarding"
+    st.session_state.flow_stage = "hub"
     st.rerun()
 
-# STAGE 2: ONBOARDING PORTAL
-elif st.session_state.flow_stage == "onboarding":
-    st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="100px") 
-    st.title("Executive Identification")
-    c1, c2, c3 = st.columns(3)
-    with c1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with c2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with c3: u_age = st.number_input("Age", 18, 99, 19)
-    if st.button("Initialize System", use_container_width=True):
-        if u_name:
-            st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
-            st.session_state.flow_stage = "hub"
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# STAGE 3: MAIN HUB
 else:
-    # Sidebar Setup
     with st.sidebar:
         render_t_logo(size="130px") 
-        st.markdown(f"### Executive: {st.session_state.user['name']}")
         st.divider()
-        st.markdown("### 🕒 Intelligence History")
-        if not st.session_state.history: st.write("No session records found.")
+        st.markdown("### 🕒 Session History")
+        if not st.session_state.history: st.write("Empty.")
         for item in reversed(st.session_state.history):
-            st.markdown(f'<div class="history-card"><b>{item["title"][:30]}...</b></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="history-card"><b>{item["title"][:25]}...</b></div>', unsafe_allow_html=True)
 
     st.title("Executive Intelligence Hub")
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
 
-    # Intelligence & Dubbing Dashboard
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
-        url = st.text_input("Resource URL", placeholder="Paste YouTube Link Here")
+        url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         
         col1, col2, col3 = st.columns(3)
-        with col1: analysis_lang = st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi", "Malayalam"])
-        with col2: style = st.selectbox("Output Style", ["Comprehensive Long Summary", "Strategic Points", "Exam Prep Guide", "Actionable Deep Dive"])
-        with col3: dub_lang = st.selectbox("🎙️ Universal Dubbing", ["No Dubbing", "Tamil", "English", "Hindi"])
+        with col1: analysis_lang = st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi"])
+        with col2: voice_gender = st.selectbox("🎙️ Voice Persona", ["Male Executive", "Female Executive"])
+        with col3: dub_lang = st.selectbox("🎙️ Neural Dubbing", ["No Dubbing", "Tamil", "English", "Hindi"])
 
     if st.button("Execute Deep Analysis & Video Dubbing", use_container_width=True):
         if url:
-            with st.spinner("Initializing Neural Production Studio... This involves downloading and processing video files."):
-                m, transcript, video_path, f_id = get_video_and_audio(url)
+            with st.spinner("Initializing Neural Studio... (Extracting Media)"):
+                m, content, video_path, f_id, mode = get_video_and_data(url)
                 
-                if transcript:
-                    # 1. GENERATE LONG-FORM ANALYSIS
-                    st.subheader(f"📑 Intelligence Report: {m['title']}")
-                    st.markdown(f"**Channel:** {m['channel']} | **Engagement:** {m['likes']} Likes | **Views:** {m['views']}")
+                if mode != "error":
+                    st.subheader(f"📑 Report: {m['title']}")
+                    if mode == "fallback": st.warning("Notice: Using video description as intelligence source (No transcript available).")
                     
+                    # 1. GENERATE LONG-FORM ANALYSIS
                     api_key = st.secrets["GEMINI_API_KEY"]
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-1.5-flash')
                     
-                    analysis_prompt = f"Provide an extremely long, exhaustive, and highly detailed {style} in the {analysis_lang} language for the following transcript: {transcript[:6000]}"
+                    analysis_prompt = f"Provide an extremely long, exhaustive analysis in {analysis_lang} for: {content[:5000]}"
                     analysis_output = model.generate_content(analysis_prompt).text
                     
                     if not any(h['title'] == m['title'] for h in st.session_state.history):
@@ -254,28 +228,19 @@ else:
                     
                     st.markdown(f'<div class="analysis-result">{analysis_output}</div>', unsafe_allow_html=True)
                     
-                    # 2. GENERATE DUBBED VIDEO IF SELECTED
+                    # 2. GENERATE DUBBED VIDEO
                     if dub_lang != "No Dubbing":
-                        with st.spinner(f"Synthesizing Neural Voice ({dub_lang})... Please wait while we merge the media."):
+                        with st.spinner(f"Dabbing Voice ({voice_gender})... Overlapping Media."):
                             l_map = {"Tamil": "ta", "English": "en", "Hindi": "hi"}
-                            dubbed_video_path = create_dubbed_video(video_path, transcript, l_map[dub_lang], f_id, "Executive")
+                            dubbed_path = create_dubbed_video(video_path, content, l_map[dub_lang], f_id, voice_gender)
                             
-                            if dubbed_video_path:
+                            if dubbed_path:
                                 st.divider()
-                                st.subheader(f"📽️ Dubbed Executive Playback ({dub_lang})")
-                                st.video(dubbed_video_path)
-                                st.success("Neural Dubbing Engine Complete. Original audio muted; AI voice overlaid.")
+                                st.subheader(f"📽️ Dubbed Playback ({dub_lang})")
+                                st.video(dubbed_path)
+                                st.success("Original audio muted. Neural AI voice overlaid.")
                                 
-                                # Download Capability
-                                with open(dubbed_video_path, "rb") as file:
-                                    st.download_button(
-                                        label="📥 Download Dubbed Executive Video", 
-                                        data=file, 
-                                        file_name=f"Tackyon_Dubbed_{f_id}.mp4", 
-                                        mime="video/mp4"
-                                    )
-                            else: st.error("Neural Dubbing Engine failed during merge stage.")
-                else:
-                    st.error("Access Failure: No transcript found or resource is restricted.")
-        else:
-            st.warning("Action Required: Please provide a valid Resource URL.")
+                                with open(dubbed_path, "rb") as file:
+                                    st.download_button(label="📥 Download Dubbed Video", data=file, file_name=f"Tackyon_Dubbed_{f_id}.mp4", mime="video/mp4")
+                else: st.error("Access Failure: Resource is restricted.")
+        else: st.warning("Please provide a valid URL.")
