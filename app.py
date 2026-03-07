@@ -13,50 +13,63 @@ st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
 
 st.markdown("""
     <style>
-    /* Hide default headers but keep space for our custom Kural bar */
+    /* 1. HIDE DEFAULT UI ELEMENTS */
     header, [data-testid="stHeader"], .stAppHeader {
         display: none !important;
         visibility: hidden !important;
     }
     
+    /* 2. PAGE SPACING OPTIMIZATION */
     .block-container {
         padding-top: 0px !important;
         margin-top: -30px !important;
     }
 
-    /* Kural Box - Fixed at top with Golden Border */
+    /* 3. KURAL BOX - THE WISDOM BAR */
     .kural-box {
         background-color: #FDFEFE;
-        border-bottom: 2px solid #D4AC0D;
-        padding: 15px;
+        border-bottom: 3px solid #D4AC0D;
+        padding: 20px;
         text-align: center;
         width: 100%;
-        margin-bottom: 30px;
+        margin-bottom: 35px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
-    .kural-line1 { font-size: 1.4em; font-weight: bold; color: #1B2631; margin-bottom: 5px; }
-    .kural-line2 { font-size: 1.2em; color: #5D6D7E; }
+    .kural-line1 { font-size: 1.5em; font-weight: bold; color: #1B2631; margin-bottom: 8px; }
+    .kural-line2 { font-size: 1.3em; color: #5D6D7E; font-style: italic; }
 
-    /* Executive Card Styling - Polished and Professional */
+    /* 4. EXECUTIVE CARD DESIGN */
     .executive-card {
-        background: white; padding: 40px; border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-top: 6px solid #1B2631;
-        text-align: center; max-width: 850px; margin: auto;
+        background: white; 
+        padding: 45px; 
+        border-radius: 25px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.12); 
+        border-top: 8px solid #1B2631;
+        text-align: center; 
+        max-width: 900px; 
+        margin: auto;
     }
 
-    /* Metallic T-Pulse Animation - Every Startup */
+    /* 5. METALLIC T-PULSE ANIMATION */
     @keyframes t-pulse {
         0% { transform: scale(1); filter: brightness(100%); }
-        50% { transform: scale(1.05); filter: brightness(125%); }
+        50% { transform: scale(1.06); filter: brightness(130%); }
         100% { transform: scale(1); filter: brightness(100%); }
     }
-    .pulse-layer { animation: t-pulse 2s infinite ease-in-out; }
+    .pulse-layer { animation: t-pulse 2.5s infinite ease-in-out; }
 
-    /* Intelligence Result Display */
+    /* 6. INTELLIGENCE OUTPUT BOX */
     .analysis-result {
-        background: #F4F6F7; padding: 25px; border-radius: 15px;
-        border-left: 8px solid #1B2631; text-align: left;
-        margin-top: 20px; color: #1B2631; line-height: 1.7;
+        background: #F8F9F9; 
+        padding: 30px; 
+        border-radius: 18px;
+        border-left: 10px solid #1B2631; 
+        text-align: left;
+        margin-top: 25px; 
+        color: #1C2833; 
+        line-height: 1.8;
         font-family: 'Inter', sans-serif;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -64,18 +77,18 @@ st.markdown("""
 # --- 2. THE PROVEN LOGO ENGINE (ROBUST SCANNER) ---
 def load_logo_proven():
     """
-    Scans the folder for logo.jpg or any image file. 
-    Maintains the logo.jpg requirement.
+    Scans the local directory for the logo file.
+    Supports specific Tackyon filenames.
     """
     try:
-        # Search for specific names based on your GitHub file
+        # Check for specific files detected in your environment
         search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
         for f in search_list:
             if os.path.exists(f):
                 with open(f, "rb") as img_file:
                     return base64.b64encode(img_file.read()).decode()
         
-        # Fallback: Deep folder scan
+        # Fallback for generic image files
         for file in os.listdir("."):
             if file.lower().endswith((".png", ".jpg", ".jpeg")):
                 with open(file, "rb") as img_file:
@@ -84,97 +97,101 @@ def load_logo_proven():
         return None
     return None
 
-logo_b64 = load_logo_proven()
+logo_b64_data = load_logo_proven()
 
 def render_t_logo(size="100px", animate=False):
-    """Renders the metallic logo with optional pulse."""
-    if logo_b64:
+    """Renders the logo with a professional pulse effect."""
+    if logo_b64_data:
         anim_class = "pulse-layer" if animate else ""
         st.markdown(
-            f'<div class="{anim_class}" style="text-align: center; margin-bottom: 20px;">'
-            f'<img src="data:image/jpeg;base64,{logo_b64}" style="width:{size}; border-radius: 15px;">'
+            f'<div class="{anim_class}" style="text-align: center; margin-bottom: 25px;">'
+            f'<img src="data:image/jpeg;base64,{logo_b64_data}" style="width:{size}; border-radius: 20px;">'
             f'</div>', 
             unsafe_allow_html=True
         )
     else:
-        st.markdown(f'<div style="text-align: center; font-size: 30px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: center; font-size: 35px; font-weight: bold; color: #1B2631; margin-bottom:20px;">TACKYON AI</div>', unsafe_allow_html=True)
 
-# --- 3. DATABASE ENGINE (1,330 / 50 KURAL LOADER) ---
+# --- 3. DATABASE ENGINE (KURAL RETRIEVAL) ---
 def get_random_kural():
-    """Loads random kural from the JSON you uploaded to GitHub."""
+    """Accesses the 50-verse JSON database you created."""
     try:
         if os.path.exists("thirukural.json"):
             with open("thirukural.json", "r", encoding="utf-8") as f:
                 db = json.load(f)
                 return random.choice(db)
-    except:
+    except Exception as e:
         pass
-    # Safety Backup verse in 4-3 format
+    # Professional fallback verse
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 4. INTELLIGENCE ENGINE (THE BRAIN) ---
+# --- 4. THE INTELLIGENCE ENGINE (SECURED) ---
 def get_video_data(url):
-    """Extracts metadata and transcript. Error-proof for Music/Shorts."""
+    """Extracts YouTube metadata and transcripts."""
     try:
-        ydl_opts = {'quiet': True, 'no_warnings': True}
+        ydl_opts = {'quiet': True, 'no_warnings': True, 'extract_flat': False}
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             video_id = info['id']
             metadata = {
-                "title": info.get('title', 'Unknown Title'),
-                "channel": info.get('uploader', 'Unknown Channel'),
-                "subs": info.get('subscriber_count', 'Private'),
+                "title": info.get('title', 'Unknown Resource'),
+                "channel": info.get('uploader', 'Independent Creator'),
+                "subs": info.get('subscriber_count', 'N/A'),
                 "likes": info.get('like_count', 'N/A'),
                 "views": info.get('view_count', '0'),
-                "description": info.get('description', '')[:1000]
+                "description": info.get('description', '')[:1200]
             }
             try:
                 transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-                transcript = " ".join([t['text'] for t in transcript_list])
-                return metadata, transcript, "full"
+                transcript_text = " ".join([t['text'] for t in transcript_list])
+                return metadata, transcript_text, "full"
             except:
-                # No transcript mode (Music, Shorts, etc.)
+                # Meta-only mode for music/shorts
                 return metadata, None, "meta_only"
-    except:
+    except Exception as e:
         return None, None, "error"
 
 def generate_ai_analysis(transcript, metadata, style, lang, mode):
-    """Connected to your verified Gemini API Key."""
-    # YOUR VERIFIED KEY INTEGRATED HERE
-    genai.configure(api_key="AIzaSyAowiGHQc-1BdRWbB0KMlyraQcsaT5ktBA")
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    if mode == "meta_only":
-        prompt = f"""
-        Act as a professional YouTube brand analyst. This video has no transcript. 
-        Based on the Title: {metadata['title']} and Description: {metadata['description']}, 
-        provide a deep {style} in {lang} language. 
-        Analyze the artist/creator, the channel's impact, and the content's purpose.
-        """
-    else:
-        prompt = f"""
-        Act as an Executive Intelligence Analyst. Analyze this transcript: {transcript}. 
-        Provide a highly professional {style} in the {lang} language. 
-        Highlight key takeaways, strategic insights, and essential data points.
-        """
-    
-    response = model.generate_content(prompt)
-    return response.text
+    """Generates AI insights using SECURE Streamlit secrets."""
+    try:
+        # SECURE CONFIGURATION
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        if mode == "meta_only":
+            prompt = f"""
+            Act as a Strategic Brand Consultant. This content has no transcript (Music/Short). 
+            Based on Title: {metadata['title']} and Description: {metadata['description']}, 
+            provide a {style} in {lang} language. 
+            Analyze the creative impact and channel authority.
+            """
+        else:
+            prompt = f"""
+            Act as an Executive Intelligence Officer. Analyze this transcript: {transcript}. 
+            Provide a world-class {style} in the {lang} language. 
+            Focus on strategic takeaways and actionable wisdom.
+            """
+        
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"System Alert: AI Engine could not initialize. Error: {str(e)}"
 
-# --- 5. THE EXECUTIVE FLOW (180+ LINES PRESERVED) ---
+# --- 5. THE EXECUTIVE WORKFLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
 
-# STAGE 1: LOGO ANIMATION (Every opening)
+# STAGE 1: LOGO ANIMATION (Every startup)
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
-    render_t_logo(size="350px", animate=True)
-    time.sleep(2)
+    render_t_logo(size="380px", animate=True)
+    time.sleep(2.5)
     st.session_state.flow_stage = "onboarding"
     st.rerun()
 
-# STAGE 2: ONBOARDING (Kural in top box + Logo)
+# STAGE 2: ONBOARDING
 elif st.session_state.flow_stage == "onboarding":
     st.markdown(f"""
         <div class="kural-box">
@@ -184,22 +201,22 @@ elif st.session_state.flow_stage == "onboarding":
     """, unsafe_allow_html=True)
     
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="90px") 
-    st.title("Executive Onboarding")
-    st.write("Welcome to Tackyon AI Intelligence Portal")
+    render_t_logo(size="100px") 
+    st.title("Executive Identification")
+    st.write("Welcome to the Tackyon AI Intelligence Gateway")
     col1, col2, col3 = st.columns(3)
-    with col1: name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with col2: gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3: age = st.number_input("Age", 18, 99, 19)
+    with col1: user_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
+    with col2: user_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
+    with col3: user_age = st.number_input("Age", 18, 99, 19)
     
-    if st.button("Begin Your Journey", use_container_width=True):
-        if name:
-            st.session_state.user = {"name": name, "gender": gender, "age": age}
+    if st.button("Initialize System", use_container_width=True):
+        if user_name:
+            st.session_state.user = {"name": user_name, "gender": user_gender, "age": user_age}
             st.session_state.flow_stage = "gateway"
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 3: GATEWAY (Same Kural + Logo)
+# STAGE 3: GATEWAY
 elif st.session_state.flow_stage == "gateway":
     st.markdown(f"""
         <div class="kural-box">
@@ -209,51 +226,51 @@ elif st.session_state.flow_stage == "gateway":
     """, unsafe_allow_html=True)
     
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="80px")
-    st.subheader("Intelligence Gateway | Daily Reflection")
-    st.info(f"Authorized: Executive {st.session_state.user['name']}. System Online.")
+    render_t_logo(size="90px")
+    st.subheader("System Readiness Confirmed")
+    st.info(f"Identity Verified: Executive {st.session_state.user['name']}.")
     
     if st.button("Enter Intelligence Hub", use_container_width=True):
         st.session_state.flow_stage = "hub"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 4: MAIN HUB (Logo in sidebar, NO Kural)
+# STAGE 4: MAIN HUB
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    render_t_logo(size="140px") 
+    render_t_logo(size="150px") 
     st.sidebar.markdown("</div>", unsafe_allow_html=True)
     st.sidebar.markdown(f"<h3 style='text-align: center;'>Executive: {st.session_state.user['name']}</h3>", unsafe_allow_html=True)
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
-    with st.expander("📥 Primary Data Acquisition", expanded=True):
-        url = st.text_input("Resource URL", placeholder="Paste YouTube Link (Vlog, Music, or Shorts)")
+    with st.expander("📥 Primary Resource Acquisition", expanded=True):
+        url_input = st.text_input("Resource URL", placeholder="Paste YouTube Link (Vlogs, Music, or Shorts)")
         c1, c2, c3 = st.columns(3)
-        with c1: lang = st.selectbox("Intelligence Language", [
+        with c1: intelligence_lang = st.selectbox("Intelligence Language", [
             "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", 
             "French", "German", "Spanish", "Japanese", "Chinese"
         ])
-        with c2: style = st.selectbox("Output Style", [
+        with c2: intelligence_style = st.selectbox("Output Style", [
             "Executive Summary", "Strategic Points", "Exam Point of View", 
-            "Twitter Thread", "Actionable Steps"
+            "Twitter Thread", "Threads Post", "Actionable Steps"
         ])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
-            if url:
+            if url_input:
                 with st.spinner("Decrypting Intelligence..."):
-                    meta, trans, mode = get_video_data(url)
-                    if mode == "error":
-                        st.error("Access Denied: Invalid URL or System Timeout.")
+                    v_meta, v_trans, v_mode = get_video_data(url_input)
+                    if v_mode == "error":
+                        st.error("System Failure: Access denied to the provided URL.")
                     else:
-                        st.markdown(f"### 📊 Analysis: {meta['title']}")
-                        st.markdown(f"**Channel:** {meta['channel']} | **Subscribers:** {meta['subs']} | **Likes:** {meta['likes']}")
+                        st.markdown(f"### 📑 Analysis Report: {v_meta['title']}")
+                        st.markdown(f"**Channel:** {v_meta['channel']} | **Authority:** {v_meta['subs']} Subs | **Engagement:** {v_meta['likes']} Likes")
                         try:
-                            result = generate_ai_analysis(trans, meta, style, lang, mode)
-                            st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{result}</div>', unsafe_allow_html=True)
+                            final_result = generate_ai_analysis(v_trans, v_meta, intelligence_style, intelligence_lang, v_mode)
+                            st.markdown(f'<div class="analysis-result"><b>{intelligence_style} ({intelligence_lang}):</b><br><br>{final_result}</div>', unsafe_allow_html=True)
                         except Exception as e:
-                            st.warning("AI Engine Offline. Showing metadata fallback:")
-                            st.markdown(f'<div class="analysis-result">{meta["description"]}</div>', unsafe_allow_html=True)
+                            st.warning("AI Node Interrupted. Showing metadata summary:")
+                            st.markdown(f'<div class="analysis-result">{v_meta["description"]}</div>', unsafe_allow_html=True)
             else:
-                st.warning("Please provide a valid YouTube Link.")
+                st.warning("Action Required: Please provide a valid Resource URL.")
