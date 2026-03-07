@@ -149,7 +149,7 @@ def create_dubbed_video(video_path, transcript, lang_code, file_id, voice_type):
         # 1. AI Script Generation (Avoids 0-sec audio errors)
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Process in chunks if extremely long
         prompt = f"Convert this transcript into a natural, storytelling script in the language with code '{lang_code}'. The goal is a professional dubbing script: {transcript[:4500]}"
