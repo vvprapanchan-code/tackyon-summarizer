@@ -119,7 +119,7 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
         genai.configure(api_key=api_key)
         
         # FIXED MODEL NAME TO AVOID 404
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # INSTRUCTION FOR MAXIMUM DETAIL
         long_instr = "Provide an extremely long, exhaustive, and detailed analysis. Do not summarize briefly."
