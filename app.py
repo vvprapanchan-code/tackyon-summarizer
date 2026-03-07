@@ -148,7 +148,7 @@ def create_dubbed_video(video_path, content, lang_code, file_id, voice_type):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Summarize to ensure the voice file is not too long or empty
         prompt = f"Convert this content into a professional storytelling script in {lang_code}. Make it engaging: {content[:4000]}"
