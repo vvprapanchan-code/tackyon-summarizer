@@ -95,7 +95,7 @@ def generate_ai_content(prompt_text):
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         # Using 1.5 Flash for Executive Processing
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e: return f"Error: {str(e)}"
@@ -158,15 +158,15 @@ elif st.session_state.flow_stage == "gateway":
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 4: MAIN HUB & NAVIGATION
+# STAGE 4: HUB & NAVIGATION STUDIO
 else:
-    # --- SIDEBAR NAVIGATION & HISTORY ---
+    # --- SIDEBAR MENU ---
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="130px") 
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
     
-    # PAGE SELECTOR
+    # NAVIGATION DROPDOWN
     app_mode = st.sidebar.selectbox("Choose Mode", ["Intelligence Hub", "Universal Dubbing Studio"])
     
     st.sidebar.divider()
