@@ -6,4 +6,3 @@ yt-dlp
 youtube-transcript-api
 moviepy
 pydub
-audioop-lts
