@@ -95,7 +95,7 @@ def generate_ai_content(prompt_text):
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         # Using 1.5 Flash for Executive Processing
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e: return f"Error: {str(e)}"
@@ -204,7 +204,7 @@ else:
     elif app_mode == "Universal Dubbing Studio":
         st.title("Universal Dubbing Studio")
         st.write("Translate any video audio into a new voice instantly.")
-                dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
+        dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
         lang_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te", "Kannada": "kn", "French": "fr", "German": "de"}
         target_lang = st.selectbox("Select Dubbing Language", list(lang_map.keys()))
         
