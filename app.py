@@ -164,13 +164,17 @@ else:
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
         with c1: 
-            # ADDED ALL GLOBAL LANGUAGES HERE
             st.selectbox("Intelligence Language", [
                 "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", 
                 "French", "German", "Spanish", "Japanese", "Chinese", "Russian", 
                 "Arabic", "Portuguese", "Italian", "Korean", "Turkish", "Dutch"
             ])
-        with c2: st.selectbox("Output Style", ["Summary", "Strategic Points"])
+        with c2: 
+            # ADDED NEW OUTPUT STYLES HERE
+            st.selectbox("Output Style", [
+                "Executive Summary", "Strategic Points", "Exam Point of View", 
+                "Twitter (X) Thread", "Threads Post", "Actionable Steps", "Detailed Notes"
+            ])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
         
         if st.button("Execute Deep Analysis", use_container_width=True):
