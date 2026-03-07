@@ -8,6 +8,14 @@ import google.generativeai as genai
 from yt_dlp import YoutubeDL
 from youtube_transcript_api import YouTubeTranscriptApi
 from gtts import gTTS
+
+# --- PYTHON 3.13 AUDIO FIX ---
+try:
+    import audioop
+except ImportError:
+    import audioop_lts as audioop
+# ----------------------------------------------
+
 from pydub import AudioSegment
 
 # --- 1. THEME & EXECUTIVE ARCHITECTURE (PROTECTED) ---
@@ -87,22 +95,17 @@ def generate_ai_content(prompt_text):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
     except Exception as e:
         return f"Error: {str(e)}"
 
-# AUTO-DUBBING CORE LOGIC
 def run_auto_dubbing(transcript, target_lang_code):
     try:
         if not os.path.exists("temp"): os.makedirs("temp")
-        
-        # Translate transcript for voice
         translate_prompt = f"Translate this text perfectly to the language with code '{target_lang_code}'. Only return the translated text: {transcript}"
         translated_text = generate_ai_content(translate_prompt)
-        
-        # Create Speech
         tts = gTTS(text=translated_text, lang=target_lang_code, slow=False)
         dub_path = f"temp/dubbed_{int(time.time())}.mp3"
         tts.save(dub_path)
@@ -116,9 +119,8 @@ if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
     st.session_state.history = []
-    st.session_state.current_page = "hub" # For page switching
+    st.session_state.current_page = "hub"
 
-# STAGE 1: ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
@@ -131,7 +133,6 @@ if st.session_state.flow_stage == "animation":
     time.sleep(0.5)
     st.rerun()
 
-# STAGE 2: ONBOARDING
 elif st.session_state.flow_stage == "onboarding":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -139,8 +140,8 @@ elif st.session_state.flow_stage == "onboarding":
     st.title("Executive Identification")
     c1, c2, c3 = st.columns(3)
     with c1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with col2 if 'col2' in locals() else c2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3 if 'col3' in locals() else c3: u_age = st.number_input("Age", 18, 99, 19)
+    with c2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
+    with c3: u_age = st.number_input("Age", 18, 99, 19)
     if st.button("Initialize System", use_container_width=True):
         if u_name:
             st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
@@ -148,7 +149,6 @@ elif st.session_state.flow_stage == "onboarding":
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 3: GATEWAY
 elif st.session_state.flow_stage == "gateway":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -159,17 +159,12 @@ elif st.session_state.flow_stage == "gateway":
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# STAGE 4: THE HUB & DUBBING STUDIO
 else:
-    # --- SIDEBAR HISTORY ---
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="130px") 
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
-    
-    # NAVIGATION
     page = st.sidebar.radio("Navigate", ["Intelligence Hub", "Universal Dubbing Studio"])
-    
     st.sidebar.divider()
     st.sidebar.markdown("### 🕒 Intelligence History")
     if not st.session_state.history:
@@ -178,7 +173,6 @@ else:
         for item in reversed(st.session_state.history):
             st.sidebar.markdown(f'<div class="history-card"><b>{item["title"][:40]}...</b><br><a href="{item["url"]}" target="_blank">View Video</a></div>', unsafe_allow_html=True)
 
-    # PAGE 1: INTELLIGENCE HUB
     if page == "Intelligence Hub":
         st.title("Executive Intelligence Hub")
         with st.expander("📥 Primary Resource Acquisition", expanded=True):
@@ -201,7 +195,6 @@ else:
                                 st.session_state.history.append({"title": m['title'], "url": url})
                             st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
 
-    # PAGE 2: DUBBING STUDIO
     else:
         st.title("Universal Dubbing Studio")
         st.write("Translate any video audio into a new voice instantly.")
@@ -219,7 +212,6 @@ else:
                         if audio_file:
                             st.success(f"Dubbing Complete! Listen to {m['title']} in {target_lang} below.")
                             st.audio(audio_file)
-                            # Display video reference
                             st.video(dub_url)
                     else: st.error("No speech found in video to dub.")
             else: st.warning("Please provide a video URL.")
