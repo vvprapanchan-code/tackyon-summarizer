@@ -9,12 +9,12 @@ from yt_dlp import YoutubeDL
 from youtube_transcript_api import YouTubeTranscriptApi
 from gtts import gTTS
 
-# --- PYTHON 3.13 AUDIO FIX ---
+# --- PYTHON 3.13 AUDIO ENGINE FIX ---
 try:
     import audioop
 except ImportError:
     import audioop_lts as audioop
-# ----------------------------------------------
+# -------------------------------------------------------------
 
 from pydub import AudioSegment
 
@@ -36,7 +36,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGO ENGINE ---
+# --- 2. LOGO & DATA ENGINES ---
 def load_logo_proven():
     try:
         search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
@@ -58,7 +58,6 @@ def render_t_logo(size="100px", animate=False):
     else:
         st.markdown(f'<div style="text-align: center; font-size: 35px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
 
-# --- 3. DATABASE ENGINE (KURAL) ---
 def get_random_kural():
     try:
         if os.path.exists("thirukural.json"):
@@ -68,7 +67,7 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 4. INTELLIGENCE & DUBBING ENGINES ---
+# --- 3. INTELLIGENCE & DUBBING ENGINES ---
 def get_video_data(url):
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
@@ -95,12 +94,11 @@ def generate_ai_content(prompt_text):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        # Using 1.5 Flash for the "Brain"
+        # Using 1.5 Flash for Executive Processing
         model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_text)
         return response.text
-    except Exception as e:
-        return f"Error: {str(e)}"
+    except Exception as e: return f"Error: {str(e)}"
 
 def run_auto_dubbing(transcript, target_lang_code):
     try:
@@ -111,16 +109,15 @@ def run_auto_dubbing(transcript, target_lang_code):
         dub_path = f"temp/dubbed_{int(time.time())}.mp3"
         tts.save(dub_path)
         return dub_path
-    except Exception as e:
-        st.error(f"Dubbing Failed: {str(e)}")
-        return None
+    except Exception as e: return None
 
-# --- 5. THE EXECUTIVE WORKFLOW ---
+# --- 4. THE EXECUTIVE WORKFLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
     st.session_state.history = []
 
+# STAGE 1: LOGO ANIMATION
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
@@ -133,6 +130,7 @@ if st.session_state.flow_stage == "animation":
     time.sleep(0.5)
     st.rerun()
 
+# STAGE 2: ONBOARDING
 elif st.session_state.flow_stage == "onboarding":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -149,6 +147,7 @@ elif st.session_state.flow_stage == "onboarding":
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# STAGE 3: GATEWAY
 elif st.session_state.flow_stage == "gateway":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -159,13 +158,15 @@ elif st.session_state.flow_stage == "gateway":
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# STAGE 4: MAIN HUB & NAVIGATION
 else:
-    # --- NAVIGATION & HISTORY SIDEBAR ---
+    # --- SIDEBAR NAVIGATION & HISTORY ---
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="130px") 
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
     
+    # PAGE SELECTOR
     app_mode = st.sidebar.selectbox("Choose Mode", ["Intelligence Hub", "Universal Dubbing Studio"])
     
     st.sidebar.divider()
@@ -176,6 +177,7 @@ else:
         for item in reversed(st.session_state.history):
             st.sidebar.markdown(f'<div class="history-card"><b>{item["title"][:40]}...</b><br><a href="{item["url"]}" target="_blank">View Video</a></div>', unsafe_allow_html=True)
 
+    # PAGE 1: INTELLIGENCE HUB
     if app_mode == "Intelligence Hub":
         st.title("Executive Intelligence Hub")
         with st.expander("📥 Primary Resource Acquisition", expanded=True):
@@ -198,12 +200,11 @@ else:
                                 st.session_state.history.append({"title": m['title'], "url": url})
                             st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
 
+    # PAGE 2: DUBBING STUDIO
     elif app_mode == "Universal Dubbing Studio":
         st.title("Universal Dubbing Studio")
         st.write("Translate any video audio into a new voice instantly.")
-        
-        # INDENTATION FIXED HERE
-        dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
+                dub_url = st.text_input("Video URL to Dub", placeholder="Paste YouTube Link")
         lang_map = {"Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te", "Kannada": "kn", "French": "fr", "German": "de"}
         target_lang = st.selectbox("Select Dubbing Language", list(lang_map.keys()))
         
