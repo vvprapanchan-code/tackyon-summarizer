@@ -55,15 +55,13 @@ st.markdown("""
         margin-top: 25px; 
         color: #1C2833; 
         line-height: 1.8;
-        font-family: 'Inter', sans-serif;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGO ENGINE (STABLE SCANNER) ---
+# --- 2. LOGO ENGINE ---
 def load_logo_proven():
     try:
-        # Detected filenames from your GitHub
         search_list = ["logo.jpg", "logo.jpg.jpeg", "tackyon logo", "logo.jpeg"]
         for f in search_list:
             if os.path.exists(f):
@@ -83,7 +81,7 @@ def render_t_logo(size="100px", animate=False):
     else:
         st.markdown(f'<div style="text-align: center; font-size: 35px; font-weight: bold; color: #1B2631;">TACKYON AI</div>', unsafe_allow_html=True)
 
-# --- 3. DATABASE ENGINE (KURAL LOADER) ---
+# --- 3. DATABASE ENGINE ---
 def get_random_kural():
     try:
         if os.path.exists("thirukural.json"):
@@ -93,7 +91,7 @@ def get_random_kural():
     except: pass
     return {"top": "கற்க கசடறக் கற்பவை கற்றபின்", "bottom": "நிற்க அதற்குத் தக"}
 
-# --- 4. INTELLIGENCE ENGINE (LONG-FORM & SECURE) ---
+# --- 4. INTELLIGENCE ENGINE ---
 def get_video_data(url):
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
@@ -115,56 +113,55 @@ def get_video_data(url):
 
 def generate_ai_analysis(transcript, metadata, style, lang, mode):
     try:
-        # SECURE VAULT ACCESS
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        
-        # STABLE MODEL NAME
         model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # INSTRUCTION FOR MAXIMUM DETAIL
         long_instr = "IMPORTANT: Provide an extremely long, exhaustive, and highly detailed analysis. Do not be brief."
-        
         if mode == "meta_only":
             prompt = f"Act as a Brand Expert. {long_instr} No transcript available. Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a {style} in {lang}."
         else:
             prompt = f"Act as an Executive Analyst. {long_instr} Analyze this transcript: {transcript}. Provide a professional and deep {style} in {lang} language."
-        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Intelligence Hub Offline. Error: {str(e)}"
 
-# --- 5. THE EXECUTIVE WORKFLOW (FIXED REDIRECT) ---
+# --- 5. THE EXECUTIVE WORKFLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
 
-# STAGE 1: LOGO ANIMATION (FIXED TO ENSURE NEXT PAGE LOADS)
+# STAGE 1: LOGO ANIMATION (WITH MANUAL OVERRIDE)
 if st.session_state.flow_stage == "animation":
-    st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
     
-    # Force a small wait then update state immediately
-    time.sleep(2.5)
+    # Progress container to show time is moving
+    progress_bar = st.progress(0)
+    for percent_complete in range(100):
+        time.sleep(0.02)
+        progress_bar.progress(percent_complete + 1)
+    
+    # FORCE CHANGE
     st.session_state.flow_stage = "onboarding"
+    
+    # Manual bypass button in case the automatic rerun fails
+    if st.button("Enter Portal", use_container_width=True):
+        st.rerun()
+    
+    time.sleep(0.5)
     st.rerun()
 
 # STAGE 2: ONBOARDING
 elif st.session_state.flow_stage == "onboarding":
-    # FIXED DISPLAY LOGIC TO PREVENT SYNTAX ERROR
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     render_t_logo(size="100px") 
     st.title("Executive Identification")
-    st.write("Welcome to the Tackyon AI Intelligence Gateway")
-    
     col1, col2, col3 = st.columns(3)
     with col1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
     with col2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
     with col3: u_age = st.number_input("Age", 18, 99, 19)
-    
     if st.button("Initialize System", use_container_width=True):
         if u_name:
             st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
@@ -175,12 +172,9 @@ elif st.session_state.flow_stage == "onboarding":
 # STAGE 3: GATEWAY
 elif st.session_state.flow_stage == "gateway":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     render_t_logo(size="90px")
-    st.subheader("System Readiness Confirmed")
     st.info(f"Identity Verified: Executive {st.session_state.user['name']}.")
-    
     if st.button("Enter Intelligence Hub", use_container_width=True):
         st.session_state.flow_stage = "hub"
         st.rerun()
@@ -190,10 +184,8 @@ elif st.session_state.flow_stage == "gateway":
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="150px") 
-    st.sidebar.markdown("</div>", unsafe_allow_html=True)
-    st.sidebar.markdown(f"<h3 style='text-align: center;'>Executive: {st.session_state.user['name']}</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
     st.sidebar.divider()
-    
     st.title("Executive Intelligence Hub")
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
@@ -201,7 +193,6 @@ else:
         with c1: lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada"])
         with c2: style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
         with c3: st.selectbox("Typography", ["Inter", "Arima"])
-        
         if st.button("Execute Deep Analysis", use_container_width=True):
             if url:
                 with st.spinner("Decrypting Intelligence..."):
@@ -211,6 +202,4 @@ else:
                         st.markdown(f"### 📑 Analysis Report: {m['title']}")
                         st.markdown(f"**Channel:** {m['channel']} | **Authority:** {m['subs']} Subs | **Engagement:** {m['likes']} Likes")
                         res = generate_ai_analysis(t, m, style, lang, mode)
-                        st.markdown(f'<div class="analysis-result"><b>{style} Results ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
-            else:
-                st.warning("Action Required: Please provide a valid Resource URL.")
+                        st.markdown(f'<div class="analysis-result"><b>{style} ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
