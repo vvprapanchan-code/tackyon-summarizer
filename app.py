@@ -1,94 +1,382 @@
 import streamlit as st
 import time
 import random
+import hashlib
 import uuid
+import yt_dlp
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi
+from supabase import create_client
+from datetime import datetime
 
-# --- PHASE 1 & 2: EXECUTIVE DESIGN SYSTEM ---
-st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="centered")
+# --------------------------------------
+# CONFIG
+# --------------------------------------
+
+st.set_page_config(
+    page_title="Tackyon AI",
+    page_icon="T",
+    layout="centered"
+)
+
+# --------------------------------------
+# ENVIRONMENT VARIABLES
+# --------------------------------------
+
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "")
+
+# --------------------------------------
+# SUPABASE CONNECTION
+# --------------------------------------
+
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# --------------------------------------
+# GEMINI SETUP
+# --------------------------------------
+
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+# --------------------------------------
+# CSS STYLING
+# --------------------------------------
 
 st.markdown("""
-    <style>
-    header, [data-testid="stHeader"], .stAppHeader { display: none !important; }
-    .stApp { background-color: #FDFDFD; }
-    .block-container { max-width: 550px !important; padding-top: 2rem !important; }
+<style>
 
-    /* Metallic T Animation */
-    .metallic-t { 
-        font-size: 120px; font-weight: 900; color: #1B2631; text-align: center;
-        animation: pulse 2s ease-in-out; margin-top: 20vh;
-    }
-    @keyframes pulse { 0% { opacity:0; transform:scale(0.8); } 50% { opacity:1; transform:scale(1.05); } 100% { opacity:1; transform:scale(1); } }
+body {
+    background-color:#0b0b0b;
+}
 
-    /* 4-3 Thirukural Gateway */
-    .kural-box { text-align: center; padding: 50px 20px; background: #1B2631; border-radius: 30px; margin-bottom: 20px; color: #D4AC0D; }
-    .kural-l1 { font-size: 1.4em; font-weight: 800; margin-bottom: 12px; }
-    .kural-l2 { font-size: 1.2em; font-weight: 500; opacity: 0.9; }
+.card {
+    padding:25px;
+    border-radius:18px;
+    background:#121212;
+    border:1px solid #2c2c2c;
+    box-shadow:0 0 20px rgba(0,0,0,0.4);
+}
 
-    /* Clean Card UI */
-    .exec-card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 5px 25px rgba(0,0,0,0.05); border: 1px solid #F0F0F0; margin-bottom: 25px; }
-    .assistant-logo { width: 35px; height: 35px; background: #1B2631; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; margin-right: 12px; }
-    </style>
+.center {
+    text-align:center;
+}
+
+.tlogo {
+    font-size:80px;
+    font-weight:bold;
+    color:#8ec5ff;
+}
+
+.watermark {
+    text-align:right;
+    opacity:0.3;
+}
+
+</style>
 """, unsafe_allow_html=True)
 
-# --- PHASE 1: BRAND ONBOARDING ---
-if "flow" not in st.session_state: st.session_state.flow = "splash"
+# --------------------------------------
+# THIRUKURAL DATA
+# --------------------------------------
 
-if st.session_state.flow == "splash":
-    st.markdown('<div class="metallic-t">T</div><p style="text-align:center; letter-spacing:5px;">TACKYON CORE</p>', unsafe_allow_html=True)
+kurals = [
+("அகர முதல எழுத்தெல்லாம்", "ஆதி பகவன் முதற்றே உலகு"),
+("கற்றதனால் ஆய பயனென்கொல்", "வாலறிவன் நற்றாள் தொழாஅர்"),
+("அன்பும் அறனும் உடைத்தாயின்", "இல்வாழ்க்கை பண்பும் அதுவே"),
+("ஒழுக்கம் விழுப்பம் தரலான்", "ஒழுக்கம் உயிரினும் ஓம்பப் படும்"),
+]
+
+# --------------------------------------
+# UTILS
+# --------------------------------------
+
+def generate_tackyon_id():
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    return "TACK-" + str(random.randint(100,999)) + random.choice(letters)
+
+def device_hash():
+    raw = str(uuid.getnode())
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+# --------------------------------------
+# SPLASH SCREEN
+# --------------------------------------
+
+def splash():
+
+    st.markdown(
+        "<div class='center'><div class='tlogo'>T</div><h2>Tackyon AI</h2></div>",
+        unsafe_allow_html=True
+    )
+
     time.sleep(2)
-    st.session_state.flow = "onboarding"
+    st.session_state["splash_done"] = True
     st.rerun()
 
-elif st.session_state.flow == "onboarding":
-    st.markdown('<div class="exec-card">', unsafe_allow_html=True)
-    st.title("Onboarding")
-    u_name = st.text_input("Full Name")
-    u_age = st.number_input("Age", 18, 99, 25)
-    u_gen = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    if st.button("AUTHORIZE", use_container_width=True):
-        if u_name:
-            st.session_state.user = {"name": u_name, "id": uuid.uuid4().hex[:8].upper()}
-            st.session_state.flow = "gateway"
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+# --------------------------------------
+# ONBOARDING
+# --------------------------------------
 
-elif st.session_state.flow == "gateway":
-    # Thirukural 4-3 format
-    kurals = [{"l1": "அகர முதல எழுத்தெல்லாம்", "l2": "ஆதி பகவன் முதற்றே உலகு"}]
-    k = random.choice(kurals)
-    st.markdown(f'<div class="kural-box"><div class="kural-l1">{k["l1"]}</div><div class="kural-l2">{k["l2"]}</div></div>', unsafe_allow_html=True)
-    time.sleep(3)
-    st.session_state.flow = "workspace"
-    st.rerun()
+def onboarding():
 
-# --- PHASE 3 & 4: WORKSPACE & ASSISTANT ---
-else:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("Welcome")
+
+    name = st.text_input("Name")
+    gender = st.selectbox("Gender", ["Male","Female","Other"])
+    age = st.number_input("Age", 10,100)
+
+    if st.button("Continue"):
+
+        tid = generate_tackyon_id()
+
+        st.session_state["user"] = {
+            "name":name,
+            "gender":gender,
+            "age":age,
+            "tackyon_id":tid
+        }
+
+        if supabase:
+            supabase.table("users").insert({
+                "name":name,
+                "gender":gender,
+                "age":age,
+                "tackyon_id":tid,
+                "device_hash":device_hash(),
+                "created_at":str(datetime.now())
+            }).execute()
+
+        st.session_state["onboard_done"] = True
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# --------------------------------------
+# THIRUKURAL GATEWAY
+# --------------------------------------
+
+def kural_screen():
+
+    kural = random.choice(kurals)
+
+    st.markdown("<div class='card center'>", unsafe_allow_html=True)
+
+    st.subheader("திருக்குறள்")
+
+    st.write("")
+    st.write(kural[0])
+    st.write(kural[1])
+    st.write("")
+
+    if st.button("Enter"):
+        st.session_state["kural_done"] = True
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# --------------------------------------
+# YOUTUBE METADATA
+# --------------------------------------
+
+def extract_metadata(url):
+
+    ydl_opts = {
+        'quiet':True
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    return {
+        "title":info.get("title"),
+        "description":info.get("description"),
+        "duration":info.get("duration"),
+        "channel":info.get("channel")
+    }
+
+# --------------------------------------
+# TRANSCRIPT
+# --------------------------------------
+
+def get_transcript(video_id):
+
+    try:
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        text = " ".join([x["text"] for x in transcript])
+        return text
+    except:
+        return None
+
+# --------------------------------------
+# GEMINI ANALYSIS
+# --------------------------------------
+
+def analyze(text):
+
+    prompt = f"""
+    Analyze this video content.
+
+    Provide:
+    - Summary
+    - Key Insights
+    - Learning Points
+    - Important Quotes
+
+    Content:
+    {text}
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+
+    except Exception as e:
+
+        if "429" in str(e):
+            return "AI engine busy. Try again later."
+
+        return "AI processing error."
+
+# --------------------------------------
+# EXPORT
+# --------------------------------------
+
+def export_report(text):
+
+    watermark = """
+
+--------------------------------
+Generated by Tackyon AI
+
+        T
+--------------------------------
+"""
+
+    final = text + watermark
+
+    st.download_button(
+        "Download Report",
+        final,
+        file_name="tackyon_report.txt"
+    )
+
+# --------------------------------------
+# ASSISTANT CHAT
+# --------------------------------------
+
+def assistant():
+
+    st.subheader("Tackyon Assistant")
+
+    if "chat" not in st.session_state:
+        st.session_state.chat = []
+
+    user = st.text_input("Ask something")
+
+    if st.button("Send"):
+
+        st.session_state.chat.append(("user",user))
+
+        try:
+            response = model.generate_content(
+                f"You are Tackyon AI assistant. {user}"
+            )
+
+            answer = response.text
+
+        except:
+            answer = "Assistant busy."
+
+        st.session_state.chat.append(("ai",answer))
+
+    for role,msg in st.session_state.chat:
+
+        if role == "user":
+            st.write("You:",msg)
+        else:
+            st.write("Tackyon AI:",msg)
+
+# --------------------------------------
+# DASHBOARD
+# --------------------------------------
+
+def dashboard():
+
+    st.sidebar.title("Settings")
+
+    theme = st.sidebar.selectbox(
+        "Accent",
+        ["Blue","Purple","Red","Silver"]
+    )
+
     st.title("Tackyon AI")
-    st.caption(f"Session: {st.session_state.user['name']} | ID: {st.session_state.user['id']}")
 
-    st.markdown('<div class="exec-card">', unsafe_allow_html=True)
-    url = st.text_input("YouTube URL")
-    lang = st.selectbox("Language", ["Tamil", "English", "Hindi", "French", "German", "Spanish"])
-    
-    if st.button("GENERATE REPORT", use_container_width=True):
-        if url:
-            try:
-                v_id = url.split("v=")[1].split("&")[0] if "v=" in url else url.split("/")[-1]
-                raw = YouTubeTranscriptApi.get_transcript(v_id)
-                context = " ".join([t['text'] for t in raw])
-                
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                report = model.generate_content(f"Summarize in {lang}: {context[:5000]}").text
-                st.write(report)
-            except Exception as e:
-                st.error("Daily Quota Reached. Please try again tomorrow.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-    # Tackyon Assistant
-    st.markdown('<div class="exec-card"><div style="display:flex; align-items:center;"><div class="assistant-logo">T</div><b>Tackyon Assistant</b></div>', unsafe_allow_html=True)
-    q = st.chat_input("Ask Tackyon...")
-    if q: st.write(f"🎙️ Analysis in progress...")
-    st.markdown('</div>', unsafe_allow_html=True)
+    url = st.text_input("Paste YouTube URL")
+
+    if st.button("Analyze"):
+
+        if not url:
+            st.warning("Enter URL")
+            return
+
+        video_id = url.split("v=")[-1]
+
+        metadata = extract_metadata(url)
+
+        transcript = get_transcript(video_id)
+
+        if transcript:
+            result = analyze(transcript)
+        else:
+
+            fallback = f"""
+            Title: {metadata['title']}
+            Description: {metadata['description']}
+            """
+
+            result = analyze(fallback)
+
+        st.session_state["report"] = result
+
+        st.write(result)
+
+        if supabase:
+
+            supabase.table("analysis_history").insert({
+
+                "youtube_url":url,
+                "summary":result,
+                "created_at":str(datetime.now())
+
+            }).execute()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if "report" in st.session_state:
+        export_report(st.session_state["report"])
+
+    assistant()
+
+# --------------------------------------
+# APP FLOW
+# --------------------------------------
+
+if "splash_done" not in st.session_state:
+    splash()
+
+elif "onboard_done" not in st.session_state:
+    onboarding()
+
+elif "kural_done" not in st.session_state:
+    kural_screen()
+
+else:
+    dashboard()
