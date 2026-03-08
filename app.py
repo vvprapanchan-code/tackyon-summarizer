@@ -265,8 +265,8 @@ else:
             crossorigin="anonymous"></script>
             <ins class="adsbygoogle"
                  style="display:inline-block;width:320px;height:50px"
-                 data-ad-client="ca-app-pub-3510846848926159"
-                 data-ad-slot="6300978111"></ins>
+                 data-ad-client="ca-pub-3510846848926159"
+                 data-ad-slot="1148139407"></ins>
             <script>
                  (adsbygoogle = window.adsbygoogle || []).push({{}});
             </script>
