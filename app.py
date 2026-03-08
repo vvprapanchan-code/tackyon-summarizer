@@ -158,6 +158,7 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
 
 # --- FIXED DUBBING ENGINE WITH SMART FALLBACK ---
 def execute_neural_dubbing(transcript, metadata, lang_name, mode):
+    """Bypasses missing transcripts by using metadata for dubbing context."""
     try:
         target_code = LANG_HUB.get(lang_name, "en")
         api_key = st.secrets["GEMINI_API_KEY"]
@@ -253,17 +254,22 @@ else:
                         st.session_state.last_analysis = res
                         st.markdown(f'<div class="analysis-result">{res}<div class="report-watermark">(T) TACKYON AI</div></div>', unsafe_allow_html=True)
                         st.download_button("📥 Export Report", f"REPORT\n\n{res}", file_name="Tackyon_Report.txt")
-        
+
         # --- 4. SAFE ADMOB TEST SECTION ---
+        # Integrated strictly using the format from your reference
         st.markdown("---")
         st.write("Development Mode: Safety Test Ad")
         components.html(
             f"""
             <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
             crossorigin="anonymous"></script>
-            <ins class="adsbygoogle" style="display:inline-block;width:320px;height:50px"
-            data-ad-client="ca-app-pub-3510846848926159" data-ad-slot="6300978111"></ins>
-            <script>(adsbygoogle = window.adsbygoogle || []).push({{}});</script>
+            <ins class="adsbygoogle"
+                 style="display:inline-block;width:320px;height:50px"
+                 data-ad-client="ca-app-pub-3510846848926159"
+                 data-ad-slot="6300978111"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({{}});
+            </script>
             """,
             height=100,
         )
