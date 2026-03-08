@@ -57,6 +57,36 @@ st.markdown("""
         line-height: 1.8;
         font-family: 'Inter', sans-serif;
     }
+
+    /* TACKYON ASSISTANT UI ELEMENTS */
+    .assistant-header {
+        display: flex;
+        align-items: center;
+        margin-top: 30px;
+        padding: 15px;
+        background: #1B2631;
+        color: white;
+        border-radius: 15px 15px 0 0;
+    }
+    .assistant-icon {
+        width: 30px;
+        height: 30px;
+        background: white;
+        color: #1B2631;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        margin-right: 12px;
+    }
+    .assistant-body {
+        background: white;
+        border: 1px solid #1B2631;
+        border-radius: 0 0 15px 15px;
+        padding: 20px;
+        margin-bottom: 40px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -117,7 +147,6 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         
-        # KEPT YOUR SUCCESSFUL MODEL CHOICE
         model = genai.GenerativeModel('gemini-2.5-flash')
         
         long_instr = "Provide an extremely long, exhaustive, and detailed analysis. Do not summarize briefly."
@@ -132,10 +161,31 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
     except Exception as e:
         return f"Intelligence Hub Offline. Error: {str(e)}"
 
+# --- NEW: TACKYON ASSISTANT ENGINE ---
+def run_tackyon_assistant(user_query, context, lang):
+    """Discrete Assistant logic strictly following the Tackyon AI persona."""
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        persona_prompt = f"""
+        Role: You are Tackyon AI, an elite Discrete Intelligence Assistant.
+        Creator: Prapanchan (Only mention if the user explicitly asks who created you).
+        Environment: You are answering a query about a specific video resource.
+        Instruction: Respond in {lang} based on this context: {context[:4000]}
+        User Query: {user_query}
+        """
+        response = model.generate_content(persona_prompt)
+        return response.text
+    except:
+        return "Tackyon Assistant is processing other requests. Please wait."
+
 # --- 5. THE EXECUTIVE WORKFLOW ---
 if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
+    st.session_state.chat_history = [] # For Assistant persistence
 
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
@@ -177,12 +227,13 @@ else:
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
+    
+    # 5.1 PRIMARY RESOURCE AQUISITION
     with st.expander("📥 Primary Resource Acquisition", expanded=True):
         url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
         c1, c2, c3 = st.columns(3)
         with c1: 
-            # EXPANDED GLOBAL LANGUAGE LIST
-            lang = st.selectbox("Intelligence Language", [
+            lang_choice = st.selectbox("Intelligence Language", [
                 "Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", "Marathi", "Bengali", "Gujarati", "Punjabi",
                 "French", "German", "Spanish", "Japanese", "Chinese (Simplified)", "Chinese (Traditional)", "Korean", 
                 "Russian", "Arabic", "Portuguese", "Italian", "Turkish", "Dutch", "Vietnamese", "Thai", "Indonesian",
@@ -200,6 +251,34 @@ else:
                     if mode == "error": st.error("Access denied to the provided URL.")
                     else:
                         st.markdown(f"### 📑 Analysis Report: {m['title']}")
-                        st.markdown(f"**Channel:** {m['channel']} | **Authority:** {m['subs']} Subs | **Engagement:** {m['likes']} Likes")
-                        res = generate_ai_analysis(t, m, style, lang, mode)
-                        st.markdown(f'<div class="analysis-result"><b>{style} Results ({lang}):</b><br><br>{res}</div>', unsafe_allow_html=True)
+                        st.markdown(f"**Channel:** {m['channel']} | **Authority:** {m['subs']} Subs")
+                        res = generate_ai_analysis(t, m, style, lang_choice, mode)
+                        st.session_state.last_analysis = res # Save context for assistant
+                        st.markdown(f'<div class="analysis-result"><b>{style} Results ({lang_choice}):</b><br><br>{res}</div>', unsafe_allow_html=True)
+
+    # 5.2 TACKYON AI ASSISTANT MODULE
+    st.markdown('<div class="assistant-header"><div class="assistant-icon">T</div><b>Tackyon AI Assistant</b></div>', unsafe_allow_html=True)
+    st.markdown('<div class="assistant-body">', unsafe_allow_html=True)
+    
+    if "last_analysis" not in st.session_state:
+        st.caption("Generate an Intelligence Report first to enable the Assistant.")
+    else:
+        # Display existing chat history
+        for chat in st.session_state.chat_history:
+            with st.chat_message(chat["role"]):
+                st.write(chat["content"])
+        
+        # User input for the assistant
+        assistant_query = st.chat_input("Ask Tackyon about this resource...")
+        if assistant_query:
+            st.session_state.chat_history.append({"role": "user", "content": assistant_query})
+            with st.chat_message("user"):
+                st.write(assistant_query)
+            
+            with st.chat_message("assistant"):
+                with st.spinner("Tackyon AI is analyzing..."):
+                    response = run_tackyon_assistant(assistant_query, st.session_state.last_analysis, lang_choice)
+                    st.write(response)
+                    st.session_state.chat_history.append({"role": "assistant", "content": response})
+                    
+    st.markdown('</div>', unsafe_allow_html=True)
