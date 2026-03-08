@@ -8,6 +8,7 @@ import google.generativeai as genai
 from yt_dlp import YoutubeDL
 from youtube_transcript_api import YouTubeTranscriptApi
 from datetime import datetime
+from gtts import gTTS
 
 # --- 1. THEME & EXECUTIVE ARCHITECTURE (PROTECTED) ---
 st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
@@ -38,6 +39,7 @@ st.markdown("""
         text-align: center; 
         max-width: 900px; 
         margin: auto;
+        margin-bottom: 30px;
     }
 
     @keyframes t-pulse {
@@ -57,49 +59,35 @@ st.markdown("""
         color: #1C2833; 
         line-height: 1.8;
         font-family: 'Inter', sans-serif;
-        position: relative;
     }
 
-    /* WATERMARK STYLING */
     .report-watermark {
-        text-align: right;
-        font-size: 10px;
-        color: #BDC3C7;
-        font-weight: 900;
-        letter-spacing: 2px;
-        margin-top: 15px;
+        text-align: right; font-size: 10px; color: #BDC3C7;
+        font-weight: 900; letter-spacing: 2px; margin-top: 15px;
     }
 
     .assistant-header {
-        display: flex;
-        align-items: center;
-        margin-top: 30px;
-        padding: 15px;
-        background: #1B2631;
-        color: white;
-        border-radius: 15px 15px 0 0;
+        display: flex; align-items: center; margin-top: 30px;
+        padding: 15px; background: #1B2631; color: white; border-radius: 15px 15px 0 0;
     }
     .assistant-icon {
-        width: 30px;
-        height: 30px;
-        background: white;
-        color: #1B2631;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
-        margin-right: 12px;
+        width: 30px; height: 30px; background: white; color: #1B2631;
+        border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-weight: 900; margin-right: 12px;
     }
     .assistant-body {
-        background: white;
-        border: 1px solid #1B2631;
-        border-radius: 0 0 15px 15px;
-        padding: 20px;
-        margin-bottom: 40px;
+        background: white; border: 1px solid #1B2631;
+        border-radius: 0 0 15px 15px; padding: 20px; margin-bottom: 40px;
     }
     </style>
     """, unsafe_allow_html=True)
+
+# --- GLOBAL LANGUAGE HUB ---
+LANG_HUB = {
+    "Tamil": "ta", "English": "en", "Hindi": "hi", "Malayalam": "ml", "Telugu": "te",
+    "Kannada": "kn", "French": "fr", "German": "de", "Spanish": "es", "Japanese": "ja",
+    "Chinese": "zh-cn", "Arabic": "ar", "Russian": "ru", "Portuguese": "pt", "Korean": "ko"
+}
 
 # --- 2. LOGO ENGINE (STABLE SCANNER) ---
 def load_logo_proven():
@@ -142,9 +130,7 @@ def get_video_data(url):
             metadata = {
                 "title": info.get('title', 'Unknown Resource'),
                 "channel": info.get('uploader', 'Independent Creator'),
-                "subs": info.get('subscriber_count', 'N/A'),
-                "likes": info.get('like_count', 'N/A'),
-                "description": info.get('description', '')[:1200]
+                "id": info.get('id', '')
             }
             try:
                 transcript_list = YouTubeTranscriptApi.get_transcript(info['id'])
@@ -158,25 +144,44 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
-        long_instr = "Provide an extremely long, exhaustive, and detailed analysis. Do not summarize briefly."
         if mode == "meta_only":
-            prompt = f"Act as a Brand Expert. {long_instr} No transcript available. Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a {style} in {lang}."
+            prompt = f"Act as a Brand Expert. Based on Title: {metadata['title']}, provide a {style} in {lang}."
         else:
-            prompt = f"Act as an Executive Analyst. {long_instr} Analyze this transcript: {transcript}. Provide a professional and deep {style} in {lang} language."
+            prompt = f"Act as an Executive Analyst. Analyze: {transcript}. Provide a deep {style} in {lang}."
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Intelligence Hub Offline. Error: {str(e)}"
+
+# --- NEW: SEPARATE DUBBING ENGINE ---
+def execute_neural_dubbing(transcript, lang_name):
+    """Generates a standalone dubbed audio file without video background."""
+    try:
+        target_code = LANG_HUB.get(lang_name, "en")
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Translate transcript for dubbing
+        dub_prompt = f"Translate this transcript into a natural, flowing spoken script for {lang_name}. Do not add any commentary, just the translated speech: {transcript[:4000]}"
+        translated_script = model.generate_content(dub_prompt).text
+        
+        tts = gTTS(text=translated_script, lang=target_code, slow=False)
+        tts.save("dubbed_audio.mp3")
+        return "dubbed_audio.mp3"
+    except Exception as e:
+        st.error(f"Dubbing Studio Error: {str(e)}")
+        return None
 
 def run_tackyon_assistant(user_query, context, lang):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
-        persona_prompt = f"Role: Tackyon AI Assistant. Creator: Prapanchan. Response Language: {lang}. Context: {context[:4000]}. Query: {user_query}"
+        persona_prompt = f"Role: Tackyon AI Assistant. Context: {context[:4000]}. Query: {user_query} in {lang}."
         response = model.generate_content(persona_prompt)
         return response.text
-    except: return "Assistant is processing. Please wait."
+    except: return "Assistant is processing."
 
 # --- 5. THE EXECUTIVE WORKFLOW ---
 if "flow_stage" not in st.session_state:
@@ -224,44 +229,64 @@ else:
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
-    with st.expander("📥 Primary Resource Acquisition", expanded=True):
-        url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
-        c1, c2, c3 = st.columns(3)
-        with c1: 
-            lang_choice = st.selectbox("Intelligence Language", ["Tamil", "English", "Hindi", "Malayalam", "Telugu", "Kannada", "French", "German", "Spanish", "Japanese"])
-        with c2: 
-            style = st.selectbox("Style", ["Comprehensive Long Summary", "Detailed Strategic Points", "Exam Preparation Guide", "Actionable Deep Dive"])
-        with c3: st.selectbox("Typography", ["Inter", "Arima"])
+    
+    # URL INPUT FOR ALL FEATURES
+    url = st.text_input("Resource URL", placeholder="Paste YouTube Link for Analysis or Dubbing")
+    
+    # SEPARATE FEATURE TABS
+    tab_sum, tab_dub, tab_ast = st.tabs(["Deep Intelligence Summary", "Neural Dubbing Studio", "Tackyon Assistant"])
+
+    with tab_sum:
+        st.markdown('<div class="executive-card">', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1: lang_sum = st.selectbox("Summary Language", list(LANG_HUB.keys()))
+        with c2: style = st.selectbox("Analysis Style", ["Comprehensive Summary", "Strategic Points", "Exam Guide"])
         
-        if st.button("Execute Deep Analysis", use_container_width=True):
+        if st.button("Generate Intelligence Report", use_container_width=True):
             if url:
-                with st.spinner("Decrypting Intelligence..."):
+                with st.spinner("Decoding via Gemini 2.5 Flash..."):
                     m, t, mode = get_video_data(url)
-                    if mode == "error": st.error("Access denied.")
+                    if mode == "error": st.error("Access Denied.")
                     else:
-                        st.markdown(f"### 📑 Analysis Report: {m['title']}")
-                        res = generate_ai_analysis(t, m, style, lang_choice, mode)
+                        res = generate_ai_analysis(t, m, style, lang_sum, mode)
                         st.session_state.last_analysis = res
                         st.markdown(f'<div class="analysis-result">{res}<div class="report-watermark">(T) TACKYON AI</div></div>', unsafe_allow_html=True)
-                        
-                        # --- BRANDED DOWNLOAD OPTION ---
-                        report_header = f"TACKYON AI INTELLIGENCE REPORT\nExecutive: {st.session_state.user['name']}\nResource: {m['title']}\nDate: {datetime.now().strftime('%Y-%m-%d')}\n" + "="*40 + "\n\n"
-                        full_txt = report_header + res + "\n\n" + "="*40 + "\n(T) TACKYON AI SYSTEM - AUTHENTICATED REPORT"
-                        st.download_button("📥 Download Branded Intelligence Report", full_txt, file_name=f"Tackyon_Analysis_{m['title'][:15]}.txt")
+                        report_header = f"TACKYON AI REPORT\nResource: {m['title']}\n"
+                        st.download_button("📥 Export Branded Report", report_header + res, file_name="Tackyon_Report.txt")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # ASSISTANT MODULE
-    st.markdown('<div class="assistant-header"><div class="assistant-icon">T</div><b>Tackyon AI Assistant</b></div>', unsafe_allow_html=True)
-    st.markdown('<div class="assistant-body">', unsafe_allow_html=True)
-    if "last_analysis" in st.session_state:
-        for chat in st.session_state.chat_history:
-            with st.chat_message(chat["role"]): st.write(chat["content"])
-        assistant_query = st.chat_input("Ask Tackyon about this resource...")
-        if assistant_query:
-            st.session_state.chat_history.append({"role": "user", "content": assistant_query})
-            with st.chat_message("user"): st.write(assistant_query)
-            with st.chat_message("assistant"):
-                response = run_tackyon_assistant(assistant_query, st.session_state.last_analysis, lang_choice)
-                st.write(response)
-                st.session_state.chat_history.append({"role": "assistant", "content": response})
-    else: st.caption("Generate a report to enable Assistant.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with tab_dub:
+        st.markdown('<div class="executive-card">', unsafe_allow_html=True)
+        st.subheader("Neural Overdubbing (Audio Only)")
+        dub_lang = st.selectbox("Dubbing Target Language", list(LANG_HUB.keys()), key="dub_lang")
+        
+        if st.button("Start Neural Dubbing", use_container_width=True):
+            if url:
+                with st.spinner(f"Synthesizing {dub_lang} Voice..."):
+                    m, t, mode = get_video_data(url)
+                    if t:
+                        audio_path = execute_neural_dubbing(t, dub_lang)
+                        if audio_path:
+                            st.success(f"Dubbing Complete: {dub_lang} Persona Ready.")
+                            st.audio(audio_path)
+                            with open(audio_path, "rb") as f:
+                                st.download_button("📥 Download Dubbed Audio", f, file_name=f"Tackyon_Dub_{dub_lang}.mp3")
+                    else: st.error("Transcript unavailable for dubbing.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with tab_ast:
+        st.markdown('<div class="assistant-header"><div class="assistant-icon">T</div><b>Tackyon AI Assistant</b></div>', unsafe_allow_html=True)
+        st.markdown('<div class="assistant-body">', unsafe_allow_html=True)
+        if "last_analysis" in st.session_state:
+            for chat in st.session_state.chat_history:
+                with st.chat_message(chat["role"]): st.write(chat["content"])
+            assistant_query = st.chat_input("Ask Tackyon about this resource...")
+            if assistant_query:
+                st.session_state.chat_history.append({"role": "user", "content": assistant_query})
+                with st.chat_message("user"): st.write(assistant_query)
+                with st.chat_message("assistant"):
+                    response = run_tackyon_assistant(assistant_query, st.session_state.last_analysis, "English")
+                    st.write(response)
+                    st.session_state.chat_history.append({"role": "assistant", "content": response})
+        else: st.caption("Generate a summary first to provide context for the Assistant.")
+        st.markdown('</div>', unsafe_allow_html=True)
