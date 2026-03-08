@@ -1,237 +1,214 @@
-# ==============================================================================
-# TACKYON AI: SOVEREIGN EXECUTIVE WORKSPACE (BUILD 2026.03.08)
-# ARCHITECT: PRAPANCHAN | CORE ENGINE: GEMINI 2.5 FLASH
-# FEATURES: PHASE 1-4 (EXCLUDING DUBBING/ADS)
-# ==============================================================================
-
 import streamlit as st
 import time
 import base64
 import os
 import random
-import json
 import uuid
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi
 from yt_dlp import YoutubeDL
 from datetime import datetime
 
-# --- STAGE 0: THE SOVEREIGN STYLE ENGINE ---
-st.set_page_config(page_title="Tackyon AI", page_icon="🛡️", layout="wide")
+# ==========================================
+# STAGE 1: EXECUTIVE DESIGN SYSTEM (CSS)
+# ==========================================
+st.set_page_config(page_title="Tackyon AI", page_icon="🎙️", layout="centered")
 
-st.markdown("""
-    <style>
-    /* Executive UI Overrides */
-    header, [data-testid="stHeader"], .stAppHeader { display: none !important; }
-    .block-container { padding-top: 0px !important; margin-top: -20px !important; }
-    
-    /* Font Hub (Phase 2) */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Playfair+Display:ital,wght@0,400;0,900;1,400&display=swap');
-    
-    .main { background-color: #FDFDFD; }
-    
-    /* Card Interface (Phase 2) */
-    .executive-card {
-        background: #FFFFFF; padding: 40px; border-radius: 25px;
-        border-left: 12px solid #1B2631; margin-bottom: 30px;
-        box-shadow: 0 15px 45px rgba(0,0,0,0.04); position: relative;
-    }
-    
-    .t-watermark {
-        position: absolute; bottom: 15px; right: 25px; font-size: 0.75em;
-        color: rgba(27, 38, 49, 0.25); font-weight: 900; letter-spacing: 3px;
-    }
+def apply_executive_theme(font_name="Inter", accent="#1B2631"):
+    st.markdown(f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Playfair+Display:wght@700&display=swap');
+        
+        /* Hide Streamlit Branding */
+        header, [data-testid="stHeader"], .stAppHeader {{ display: none !important; }}
+        footer {{ visibility: hidden; }}
+        
+        /* Main Workspace App-like feel */
+        .stApp {{ background-color: #F8F9FA; }}
+        .block-container {{ padding: 2rem !important; max-width: 600px !important; }}
+        
+        /* Single Column Card Design */
+        .executive-card {{
+            background: white; padding: 30px; border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 20px;
+            border: 1px solid #EDEDED; font-family: '{font_name}', sans-serif;
+        }}
+        
+        /* 4-3 Thirukural Formatting */
+        .kural-box {{
+            text-align: center; padding: 40px 20px; background: #1B2631;
+            color: #D4AC0D; border-radius: 20px; margin-bottom: 30px;
+        }}
+        .kural-line-1 {{ font-size: 1.5em; font-weight: 700; margin-bottom: 10px; word-spacing: 15px; }}
+        .kural-line-2 {{ font-size: 1.3em; font-weight: 500; word-spacing: 15px; opacity: 0.9; }}
 
-    /* Metallic Animation (Phase 1) */
-    .metallic-t {
-        font-family: 'Inter', sans-serif; font-weight: 900; font-size: 120px;
-        background: linear-gradient(135deg, #1B2631 0%, #5D6D7E 50%, #1B2631 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        animation: shine 2s ease-in-out; text-align: center;
-    }
-    
-    @keyframes shine {
-        from { opacity: 0; transform: scale(0.9); }
-        to { opacity: 1; transform: scale(1); }
-    }
-
-    .wisdom-frame {
-        text-align: center; padding: 40px; border-bottom: 3px solid #D4AC0D;
-        margin-bottom: 40px; background: white; border-radius: 0 0 40px 40px;
-    }
-    </style>
+        /* T-Logo Splash Animation */
+        .logo-container {{
+            display: flex; justify-content: center; align-items: center; height: 80vh;
+        }}
+        .metallic-t {{
+            font-size: 100px; font-weight: 900; color: #1B2631;
+            animation: pulse 2s infinite ease-in-out;
+        }}
+        @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 1; }} 50% {{ transform: scale(1.1); opacity: 0.7; }} 100% {{ transform: scale(1); opacity: 1; }} }}
+        
+        /* Assistant Bubble */
+        .assistant-header {{ display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }}
+        .assistant-logo {{ width: 30px; height: 30px; background: #1B2631; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; }}
+        
+        /* Watermark */
+        .t-watermark {{ text-align: right; font-size: 10px; color: #BDC3C7; font-weight: 900; letter-spacing: 2px; margin-top: 10px; }}
+        </style>
     """, unsafe_allow_html=True)
 
-# --- STAGE 1: ASSETS & IDENTITY (PHASE 1) ---
+# ==========================================
+# STAGE 2: DATA & IDENTITY ENGINES
+# ==========================================
 
-def get_tackyon_id():
-    """Generates a hardware-style token for Device-Locked Identity."""
-    if 'tackyon_token' not in st.session_state:
-        # In a real app, this would query hardware UUID; here we simulate it locally
-        st.session_state.tackyon_token = str(uuid.uuid4())[:13].upper()
-    return st.session_state.tackyon_token
-
-def load_kurals():
-    """Phase 1: The Thirukural Gateway (Random 1 of 50)."""
-    return [
-        {"ta": "அகர முதல எழுத்தெல்லாம் ஆதி பகவன் முதற்றே உலகு.", "en": "A, as its first of letters, every speech maintains; The Primal Deity is first through all the world's domains."},
-        {"ta": "கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.", "en": "So learn that you may faultless learn, and having learnt, remain obedient to the lessons you have learnt."},
-        {"ta": "எப்பொருள் யார்யார்வாய்க் கேட்பினும் அப்பொருள் மெய்ப்பொருள் காண்ப தறிவு.", "en": "To discern the truth in everything, by whomsoever spoken, is wisdom."},
-        # ... (Extended list of 50 Kurals)
+def get_kural():
+    """Returns random Kural in 4-3 word format."""
+    kurals = [
+        {"l1": "அகர முதல எழுத்தெல்லாம்", "l2": "ஆதி பகவன் முதற்றே உலகு"},
+        {"l1": "கற்க கசடறக் கற்பவை", "l2": "கற்றபின் நிற்க அதற்குத் தக"},
+        {"l1": "எப்பொருள் யார்யார்வாய்க் கேட்பினும்", "l2": "அப்பொருள் மெய்ப்பொருள் காண்ப தறிவு"}
     ]
+    return random.choice(kurals)
 
-# --- STAGE 2: INTELLIGENCE HUB (PHASE 3) ---
+def get_logo():
+    """Fetches T-Logo from Local/GitHub Assets."""
+    for ext in ['png', 'jpg', 'jpeg']:
+        path = f"t_logo.{ext}"
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    return None
 
-def extract_transcript(url):
-    """Deep Intelligence Engine: yt_dlp & Transcript fallback."""
-    v_id = ""
+# ==========================================
+# STAGE 3: CORE INTELLIGENCE (GEMINI 2.5)
+# ==========================================
+
+def extract_intelligence(url):
+    """Bypasses errors to get any content available."""
     try:
-        if "v=" in url: v_id = url.split("v=")[1].split("&")[0]
-        elif "youtu.be/" in url: v_id = url.split("youtu.be/")[1].split("?")[0]
-        
+        v_id = url.split("v=")[1].split("&")[0] if "v=" in url else url.split("/")[-1]
         raw_t = YouTubeTranscriptApi.get_transcript(v_id)
-        return " ".join([t['text'] for t in raw_t]), "Full Transcript"
+        return " ".join([t['text'] for t in raw_t]), "Full Analysis"
     except:
-        # Smart Discovery Fallback (Phase 3)
         try:
             with YoutubeDL({'quiet': True}) as ydl:
                 info = ydl.extract_info(url, download=False)
-                return f"Title: {info['title']}. Channel: {info['uploader']}. Description: {info['description']}", "Metadata Fallback"
-        except:
-            return None, None
+                return f"Title: {info['title']}. Description: {info.get('description','')}", "Metadata Summary"
+        except: return "No data found.", "Error"
 
-def generate_intelligence(content, style, lang, mode):
-    """Tackyon Brain Execution via Gemini 2.5 Flash."""
+def ask_tackyon(content, prompt, lang):
+    """Gemini 2.5 Flash Processor."""
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        prompt = f"""
-        Role: You are Tackyon AI, an elite Executive Intelligence Officer. 
-        Creator: Prapanchan (Only mention if explicitly asked).
-        Task: Analyze the following content and provide a {style} in {lang}. 
-        Format: Use {mode} (Paragraphs/Bullets).
-        
-        Content: {content[:8000]}
-        """
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"Intelligence Error: {str(e)}"
+        full_p = f"Translate to {lang} and answer precisely as Tackyon AI: {prompt}. Content: {content[:5000]}"
+        return model.generate_content(full_p).text
+    except: return "Intelligence Engine Busy."
 
-# --- STAGE 3: EXECUTIVE WORKFLOW ---
+# ==========================================
+# STAGE 4: THE APP FLOW
+# ==========================================
 
-if "auth_stage" not in st.session_state:
-    st.session_state.auth_stage = "splash"
+if "page" not in st.session_state: st.session_state.page = "splash"
+if "theme" not in st.session_state: st.session_state.theme = {"font": "Inter", "color": "#1B2631"}
 
-# 1. SPLASH SCREEN (PHASE 1)
-if st.session_state.auth_stage == "splash":
-    st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="metallic-t">T</div>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align:center; font-weight:300; letter-spacing:5px;">TACKYON CORE</p>', unsafe_allow_html=True)
-    time.sleep(2) # 2-second animation signal
-    st.session_state.auth_stage = "identity"
+apply_executive_theme(st.session_state.theme["font"], st.session_state.theme["color"])
+
+# --- SPLASH SCREEN (LOGO ANIMATION) ---
+if st.session_state.page == "splash":
+    st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+    logo_b64 = get_logo()
+    if logo_b64:
+        st.markdown(f'<img src="data:image/png;base64,{logo_b64}" width="150" style="animation: pulse 2s infinite;">', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="metallic-t">T</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    time.sleep(2)
+    st.session_state.page = "onboarding"
     st.rerun()
 
-# 2. IDENTITY PORTAL (PHASE 1)
-elif st.session_state.auth_stage == "identity":
-    st.markdown('<div class="executive-card" style="max-width:600px; margin: 100px auto;">', unsafe_allow_html=True)
-    st.title("Executive Onboarding")
-    name = st.text_input("Full Name")
-    c1, c2 = st.columns(2)
-    with c1: gender = st.selectbox("Gender", ["Male", "Female", "Non-Binary"])
-    with c2: age = st.number_input("Age", 18, 99, 30)
-    
-    if st.button("AUTHORIZE DEVICE", use_container_width=True):
+# --- ONBOARDING (NAME/AGE/GENDER) ---
+elif st.session_state.page == "onboarding":
+    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
+    st.subheader("Personalize Workspace")
+    name = st.text_input("First Name")
+    age = st.number_input("Age", 18, 99, 25)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    if st.button("Initialize Tackyon"):
         if name:
-            st.session_state.user_data = {"name": name, "gender": gender, "age": age, "id": get_tackyon_id()}
-            st.session_state.auth_stage = "gateway"
+            st.session_state.user = {"name": name, "age": age, "gender": gender}
+            st.session_state.page = "gateway"
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. THIRUKURAL GATEWAY (PHASE 1)
-elif st.session_state.auth_stage == "gateway":
-    kural = random.choice(load_kurals())
+# --- THIRUKURAL GATEWAY (4-3 FORMAT) ---
+elif st.session_state.page == "gateway":
+    k = get_kural()
     st.markdown(f"""
-        <div class="wisdom-frame">
-            <h1 style="color:#1B2631; font-family:'Playfair Display';">{kural['ta']}</h1>
-            <p style="font-style:italic; color:#5D6D7E;">"{kural['en']}"</p>
-            <br>
-            <p style="font-size:0.8em; letter-spacing:2px;">TACKYON GATEWAY OPENING...</p>
+        <div class="kural-box">
+            <div class="kural-line-1">{k['l1']}</div>
+            <div class="kural-line-2">{k['l2']}</div>
+            <p style="margin-top:30px; font-size:10px; letter-spacing:3px;">INITIALIZING...</p>
         </div>
     """, unsafe_allow_html=True)
     time.sleep(3)
-    st.session_state.auth_stage = "workspace"
+    st.session_state.page = "workspace"
     st.rerun()
 
-# 4. PROFESSIONAL WORKSPACE (PHASE 2-4)
+# --- THE MAIN WORKSPACE ---
 else:
-    # Sidebar Command Center (Phase 2)
+    # Sidebar Command Center
     with st.sidebar:
-        st.markdown(f"### ID: {st.session_state.user_data['id']}")
+        st.subheader("Theme & Typography")
+        st.session_state.theme["font"] = st.radio("Font Selection", ["Inter", "Playfair Display"])
+        st.session_state.theme["color"] = st.color_picker("Accent Color", "#1B2631")
         st.markdown("---")
-        st.subheader("Typography Hub")
-        font_style = st.radio("Executive Font", ["Inter (Modern)", "Playfair (Classic)"])
-        st.subheader("Theme Customization")
-        theme_color = st.color_picker("Accent Color", "#1B2631")
-        st.markdown("---")
-        st.caption("Tackyon AI v2.5.S")
+        st.caption(f"User: {st.session_state.user['name']}")
+        st.caption(f"Tackyon ID: {uuid.uuid4().hex[:8].upper()}")
 
-    # Main Workspace
-    st.title(f"Sovereign Workspace: {st.session_state.user_data['name']}")
+    st.title(f"Tackyon AI")
     
+    # SINGLE COLUMN INPUT
+    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
+    url = st.text_input("Paste YouTube URL Here", placeholder="https://youtube.com/...")
     
+    lang_list = ["Tamil", "English", "French", "German", "Hindi", "Japanese", "Spanish", "Arabic", "Russian", "Korean", "Chinese", "Italian"]
+    lang = st.selectbox("Intelligence Language", lang_list)
     
-    # Universal Input (Phase 3)
-    url = st.text_input("Universal Intelligence Input (YouTube URL)", placeholder="Paste URL here...")
+    style = st.selectbox("Style", ["Executive Summary", "Key Insights", "Exam Point of View", "Twitter Thread"])
+    format_type = st.selectbox("Format", ["Point-wise Bullets", "Clean Paragraphs"])
     
-    tab1, tab2, tab3 = st.tabs(["Deep Summary", "Executive Insights", "Assistant"])
-    
-    with tab1:
-        c1, c2, c3 = st.columns(3)
-        with c1: target_lang = st.selectbox("Language", ["Tamil", "English", "French", "German", "Hindi", "Japanese", "Spanish"])
-        with c2: style = st.selectbox("Style", ["Executive Summary", "Twitter Thread", "Exam Point of View"])
-        with c3: mode = st.selectbox("Format", ["Point-wise Bullets", "Clean Paragraphs"])
-        
-        if st.button("EXECUTE BRAIN ANALYSIS", use_container_width=True):
-            if url:
-                with st.status("Tackyon Brain Executing...") as s:
-                    content, source = extract_transcript(url)
-                    if content:
-                        s.update(label=f"Decoding via Gemini 2.5 Flash ({source})...", state="running")
-                        report = generate_intelligence(content, style, target_lang, mode)
-                        
-                        st.markdown(f"""
-                            <div class="executive-card">
-                                <h3 style="color:{theme_color};">Intelligence Report</h3>
-                                <p style="font-family:'{font_style.split()[0]}'; white-space: pre-wrap;">{report}</p>
-                                <div class="t-watermark">TACKYON T SYMBOL</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Branded Export (Phase 4)
-                        export_text = f"TACKYON AI REPORT\nUser: {st.session_state.user_data['name']}\nDate: {datetime.now()}\n\n{report}\n\n© TACKYON AI - PRAPANCHAN CREATION"
-                        st.download_button("📥 DOWNLOAD BRANDED REPORT (.TXT)", export_text, f"Tackyon_Report_{st.session_state.user_data['id']}.txt")
-                    else:
-                        st.error("Access Denied: Could not retrieve video data.")
-
-    with tab2:
-        st.info("Insights Engine: Historical patterns and creator metadata are analyzed here.")
-
-    with tab3:
-        # The Discrete Assistant (Phase 4)
-        st.subheader("Tackyon Discrete Assistant")
-        if "chat_log" not in st.session_state: st.session_state.chat_log = []
-        
-        for msg in st.session_state.chat_log:
-            with st.chat_message(msg["role"]): st.write(msg["content"])
+    if st.button("Generate Intelligence Report", use_container_width=True):
+        if url:
+            data, source = extract_intelligence(url)
+            report = ask_tackyon(data, f"Give me a {style} in {format_type}", lang)
+            st.session_state.last_report = report
+            st.markdown(f"""
+                <div style="background:#F1F2F6; padding:20px; border-radius:15px; margin-top:20px;">
+                    <p style="white-space: pre-wrap;">{report}</p>
+                    <div class="t-watermark">TACKYON T</div>
+                </div>
+            """, unsafe_allow_html=True)
             
-        if prompt := st.chat_input("Ask Tackyon about the video..."):
-            st.session_state.chat_log.append({"role": "user", "content": prompt})
-            with st.chat_message("user"): st.write(prompt)
-            
-            with st.chat_message("assistant"):
-                # Real-time assistant call
-                response = generate_intelligence(prompt, "Discrete Answer", "English", "Paragraph")
-                st.write(response)
-                st.session_state.chat_log.append({"role": "assistant", "content": response})
+            # Export Option
+            st.download_button("📥 Download Branded Report", f"TACKYON REPORT\n\n{report}\n\n(T) Symbol - Branded", file_name="Tackyon_Report.txt")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # TACKYON ASSISTANT (CARD WITH LOGO)
+    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
+    st.markdown('<div class="assistant-header"><div class="assistant-logo">T</div><b>Tackyon Assistant</b></div>', unsafe_allow_html=True)
+    if "chat" not in st.session_state: st.session_state.chat = []
+    
+    user_q = st.chat_input("Ask about the video...")
+    if user_q:
+        ans = ask_tackyon(st.session_state.get('last_report', ''), user_q, lang)
+        st.session_state.chat.append({"q": user_q, "a": ans})
+        
+    for c in st.session_state.chat:
+        st.write(f"👤: {c['q']}")
+        st.write(f"🎙️: {c['a']}")
+    st.markdown('</div>', unsafe_allow_html=True)
