@@ -130,13 +130,15 @@ def get_video_data(url):
             metadata = {
                 "title": info.get('title', 'Unknown Resource'),
                 "channel": info.get('uploader', 'Independent Creator'),
+                "description": info.get('description', '')[:2000],
                 "id": info.get('id', '')
             }
             try:
                 transcript_list = YouTubeTranscriptApi.get_transcript(info['id'])
                 transcript = " ".join([t['text'] for t in transcript_list])
                 return metadata, transcript, "full"
-            except: return metadata, None, "meta_only"
+            except: 
+                return metadata, None, "meta_only"
     except: return None, None, "error"
 
 def generate_ai_analysis(transcript, metadata, style, lang, mode):
@@ -145,7 +147,7 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
         if mode == "meta_only":
-            prompt = f"Act as a Brand Expert. Based on Title: {metadata['title']}, provide a {style} in {lang}."
+            prompt = f"Act as a Brand Expert. Based on Title: {metadata['title']} and Description: {metadata['description']}, provide a detailed {style} in {lang}."
         else:
             prompt = f"Act as an Executive Analyst. Analyze: {transcript}. Provide a deep {style} in {lang}."
         response = model.generate_content(prompt)
@@ -153,19 +155,21 @@ def generate_ai_analysis(transcript, metadata, style, lang, mode):
     except Exception as e:
         return f"Intelligence Hub Offline. Error: {str(e)}"
 
-# --- NEW: SEPARATE DUBBING ENGINE ---
-def execute_neural_dubbing(transcript, lang_name):
-    """Generates a standalone dubbed audio file without video background."""
+# --- FIXED DUBBING ENGINE WITH SMART FALLBACK ---
+def execute_neural_dubbing(transcript, metadata, lang_name, mode):
+    """Bypasses missing transcripts by using metadata for dubbing context."""
     try:
         target_code = LANG_HUB.get(lang_name, "en")
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
-        # Translate transcript for dubbing
-        dub_prompt = f"Translate this transcript into a natural, flowing spoken script for {lang_name}. Do not add any commentary, just the translated speech: {transcript[:4000]}"
+        if mode == "meta_only":
+            dub_prompt = f"Create a natural spoken audio script in {lang_name} based on this video metadata: Title: {metadata['title']}, Description: {metadata['description']}. Just output the speech script."
+        else:
+            dub_prompt = f"Translate this transcript into a natural spoken script for {lang_name}. Output only the speech: {transcript[:4000]}"
+            
         translated_script = model.generate_content(dub_prompt).text
-        
         tts = gTTS(text=translated_script, lang=target_code, slow=False)
         tts.save("dubbed_audio.mp3")
         return "dubbed_audio.mp3"
@@ -178,7 +182,7 @@ def run_tackyon_assistant(user_query, context, lang):
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
-        persona_prompt = f"Role: Tackyon AI Assistant. Context: {context[:4000]}. Query: {user_query} in {lang}."
+        persona_prompt = f"Role: Tackyon AI Assistant. Creator: Prapanchan. Context: {context[:4000]}. Query: {user_query} in {lang}."
         response = model.generate_content(persona_prompt)
         return response.text
     except: return "Assistant is processing."
@@ -229,12 +233,9 @@ else:
     st.sidebar.divider()
     
     st.title("Executive Intelligence Hub")
+    url = st.text_input("Resource URL", placeholder="Paste YouTube Link")
     
-    # URL INPUT FOR ALL FEATURES
-    url = st.text_input("Resource URL", placeholder="Paste YouTube Link for Analysis or Dubbing")
-    
-    # SEPARATE FEATURE TABS
-    tab_sum, tab_dub, tab_ast = st.tabs(["Deep Intelligence Summary", "Neural Dubbing Studio", "Tackyon Assistant"])
+    tab_sum, tab_dub, tab_ast = st.tabs(["Intelligence Summary", "Neural Dubbing Studio", "Tackyon Assistant"])
 
     with tab_sum:
         st.markdown('<div class="executive-card">', unsafe_allow_html=True)
@@ -251,8 +252,7 @@ else:
                         res = generate_ai_analysis(t, m, style, lang_sum, mode)
                         st.session_state.last_analysis = res
                         st.markdown(f'<div class="analysis-result">{res}<div class="report-watermark">(T) TACKYON AI</div></div>', unsafe_allow_html=True)
-                        report_header = f"TACKYON AI REPORT\nResource: {m['title']}\n"
-                        st.download_button("📥 Export Branded Report", report_header + res, file_name="Tackyon_Report.txt")
+                        st.download_button("📥 Export Report", f"REPORT\n\n{res}", file_name="Tackyon_Report.txt")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dub:
@@ -264,14 +264,12 @@ else:
             if url:
                 with st.spinner(f"Synthesizing {dub_lang} Voice..."):
                     m, t, mode = get_video_data(url)
-                    if t:
-                        audio_path = execute_neural_dubbing(t, dub_lang)
+                    if m:
+                        audio_path = execute_neural_dubbing(t, m, dub_lang, mode)
                         if audio_path:
                             st.success(f"Dubbing Complete: {dub_lang} Persona Ready.")
                             st.audio(audio_path)
-                            with open(audio_path, "rb") as f:
-                                st.download_button("📥 Download Dubbed Audio", f, file_name=f"Tackyon_Dub_{dub_lang}.mp3")
-                    else: st.error("Transcript unavailable for dubbing.")
+                    else: st.error("Resource inaccessible.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_ast:
@@ -280,7 +278,7 @@ else:
         if "last_analysis" in st.session_state:
             for chat in st.session_state.chat_history:
                 with st.chat_message(chat["role"]): st.write(chat["content"])
-            assistant_query = st.chat_input("Ask Tackyon about this resource...")
+            assistant_query = st.chat_input("Ask Tackyon...")
             if assistant_query:
                 st.session_state.chat_history.append({"role": "user", "content": assistant_query})
                 with st.chat_message("user"): st.write(assistant_query)
@@ -288,5 +286,5 @@ else:
                     response = run_tackyon_assistant(assistant_query, st.session_state.last_analysis, "English")
                     st.write(response)
                     st.session_state.chat_history.append({"role": "assistant", "content": response})
-        else: st.caption("Generate a summary first to provide context for the Assistant.")
+        else: st.caption("Generate a report first.")
         st.markdown('</div>', unsafe_allow_html=True)
