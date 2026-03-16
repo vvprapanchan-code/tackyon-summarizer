@@ -1,5 +1,7 @@
 import streamlit as st
+from supabase import create_client
 import streamlit.components.v1 as components
+import requests
 import time
 import base64
 import os
@@ -12,7 +14,7 @@ from datetime import datetime
 from gtts import gTTS
 
 # --- 1. THEME & EXECUTIVE ARCHITECTURE (PROTECTED) ---
-st.set_page_config(page_title="Tackyon AI", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Tackyon AI", page_icon="logo.jpg", layout="wide")
 
 st.markdown("""
     <style>
@@ -89,6 +91,18 @@ LANG_HUB = {
     "Kannada": "kn", "French": "fr", "German": "de", "Spanish": "es", "Japanese": "ja",
     "Chinese": "zh-cn", "Arabic": "ar", "Russian": "ru", "Portuguese": "pt", "Korean": "ko"
 }
+# --- SMART IP ENGINE ---
+# This connects to your database and finds the device IP
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
+
+def get_device_ip():
+    try:
+        # We use this to get the unique IP of the user's phone/laptop
+        return requests.get('https://api.ipify.org').text
+    except:
+        return "Unknown_Device"
 
 # --- 2. LOGO ENGINE (STABLE SCANNER) ---
 def load_logo_proven():
@@ -194,37 +208,44 @@ if "flow_stage" not in st.session_state:
     st.session_state.daily_kural = get_random_kural()
     st.session_state.chat_history = []
 
+# --- STAGE 0: BRAND ANIMATION & SMART CHECK ---
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
     time.sleep(2.5)
-    st.session_state.flow_stage = "onboarding"
+    
+    try:
+        user_ip = get_device_ip()
+        # Search Supabase for this specific device
+        response = supabase.table("user_data").select("*").eq("ip_address", user_ip).execute()
+        
+        if response.data:
+            st.session_state.user = {"name": response.data[0]['first_name']}
+            st.session_state.flow_stage = "hub"
+        else:
+            st.session_state.flow_stage = "onboarding"
+    except:
+        st.session_state.flow_stage = "onboarding"
     st.rerun()
 
+# --- STAGE 1: SMART ONBOARDING (Only for New Users) ---
 elif st.session_state.flow_stage == "onboarding":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     render_t_logo(size="100px") 
     st.title("Executive Onboarding")
-    col1, col2, col3 = st.columns(3)
-    with col1: u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with col2: u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3: u_age = st.number_input("Age", 18, 99, 19)
-    if st.button("Initialize", use_container_width=True):
+    u_name = st.text_input("Enter your Full Name", placeholder="e.g. Prapanchan V V")
+    
+    if st.button("Initialize Tackyon Intelligence", use_container_width=True):
         if u_name:
-            st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
-            st.session_state.flow_stage = "gateway"
+            user_ip = get_device_ip()
+            # Save the new user and their IP to Supabase
+            supabase.table("user_data").insert({"first_name": u_name, "ip_address": user_ip}).execute()
+            st.session_state.user = {"name": u_name}
+            st.session_state.flow_stage = "hub"
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-elif st.session_state.flow_stage == "gateway":
-    st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="90px")
-    st.info(f"Identity Confirmed: Executive {st.session_state.user['name']}.")
-    if st.button("Enter Intelligence Hub", use_container_width=True):
-        st.session_state.flow_stage = "hub"
-        st.rerun()
+        else:
+            st.warning("Identification Required.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:

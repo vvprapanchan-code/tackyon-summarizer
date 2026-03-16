@@ -1,9 +1,9 @@
 streamlit
-gTTS
 google-generativeai
-youtube-transcript-api
-yt-dlp
 supabase
+requests
+yt-dlp
+youtube-transcript-api
 audioop-lts
 python-dotenv
-
+gTTS
