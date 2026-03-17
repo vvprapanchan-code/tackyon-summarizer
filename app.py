@@ -261,32 +261,30 @@ else:
                 with st.spinner("Decoding via Gemini 2.5 Flash..."):
                     m, t, mode = get_video_data(url)
 
-                    if mode == "error":
+                    if mode == "error": 
                         st.error("Access Denied.")
                     else:
                         res = generate_ai_analysis(t, m, style, lang_sum, mode)
                         st.session_state.last_analysis = res
-
+                        
                         st.markdown(f'<div class="analysis-result">{res}<div class="report-watermark">(T) TACKYON AI</div></div>', unsafe_allow_html=True)
                         st.download_button("📥 Export Report", f"REPORT\n\n{res}", file_name="Tackyon_Report.txt")
 
-        st.markdown("---")
-        st.write("Development Mode: Safety Test Ad")
-
-        components.html(
-            """
-            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
-            crossorigin="anonymous"></script>
-            <ins class="adsbygoogle"
-                 style="display:inline-block;width:320px;height:50px"
-                 data-ad-client="ca-pub-3510846848926159"
-                 data-ad-slot="1148139407"></ins>
-            <script>
-                 (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
-            """,
-            height=100,
-        )
+                        # The Ad component is now properly indented inside the 'else' block
+                        components.html(
+                            f"""
+                            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3510846848926159"
+                            crossorigin="anonymous"></script>
+                            <ins class="adsbygoogle"
+                                 style="display:inline-block;width:320px;height:50px"
+                                 data-ad-client="ca-pub-3510846848926159"
+                                 data-ad-slot="1148139407"></ins>
+                            <script>
+                                 (adsbygoogle = window.adsbygoogle || []).push({{}});
+                            </script>
+                            """,
+                            height=100,
+                        )
 
         st.markdown('</div>', unsafe_allow_html=True)
 
