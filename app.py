@@ -207,6 +207,7 @@ if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
     st.session_state.chat_history = []
+    st.session_state.user = None
 
 # --- STAGE 0: BRAND ANIMATION & SMART CHECK ---
 if st.session_state.flow_stage == "animation":
@@ -214,9 +215,9 @@ if st.session_state.flow_stage == "animation":
     render_t_logo(size="380px", animate=True)
     time.sleep(2.5)
     
-   try:
+    try:
         user_ip = get_device_ip()
-        # We add a 10-second timeout so the app doesn't hang forever
+        # Search Supabase for this specific device
         response = supabase.table("user_data").select("*").eq("ip_address", user_ip).execute()
         
         if response and hasattr(response, 'data') and len(response.data) > 0:
@@ -225,9 +226,7 @@ if st.session_state.flow_stage == "animation":
         else:
             st.session_state.flow_stage = "onboarding"
     except Exception as e:
-        # RUTHLESS FIX: If the connection fails, just go to onboarding
-        # This prevents the red error screen from ever showing up!
-        st.warning(f"Database sync delayed. Entering as Guest...")
+        # If database fails, don't crash, just go to onboarding
         st.session_state.flow_stage = "onboarding"
     
     st.rerun()
@@ -238,13 +237,18 @@ elif st.session_state.flow_stage == "onboarding":
     st.markdown('<div class="executive-card">', unsafe_allow_html=True)
     render_t_logo(size="100px") 
     st.title("Executive Onboarding")
+    
     u_name = st.text_input("Enter your Full Name", placeholder="e.g. Prapanchan V V")
     
     if st.button("Initialize Tackyon Intelligence", use_container_width=True):
         if u_name:
-            user_ip = get_device_ip()
-            # Save the new user and their IP to Supabase
-            supabase.table("user_data").insert({"first_name": u_name, "ip_address": user_ip}).execute()
+            try:
+                user_ip = get_device_ip()
+                # Save the new user and their IP to Supabase
+                supabase.table("user_data").insert({"first_name": u_name, "ip_address": user_ip}).execute()
+            except:
+                pass # Continue even if database save fails
+                
             st.session_state.user = {"name": u_name}
             st.session_state.flow_stage = "hub"
             st.rerun()
