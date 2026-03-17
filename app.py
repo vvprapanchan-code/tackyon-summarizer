@@ -244,10 +244,19 @@ elif st.session_state.flow_stage == "onboarding":
         if u_name:
             try:
                 user_ip = get_device_ip()
-                # Save the new user and their IP to Supabase
+                # 1. TRY TO SAVE
                 supabase.table("user_data").insert({"first_name": u_name, "ip_address": user_ip}).execute()
-            except:
-                pass # Continue even if database save fails
+                
+                # 2. IF SAVE WORKS, LOG IN
+                st.session_state.user = {"name": u_name}
+                st.session_state.flow_stage = "hub"
+                st.rerun()
+            except Exception as e:
+                # 3. IF SAVE FAILS, SHOW THE ERROR
+                st.error(f"Database Error: {e}")
+                st.info("Check your Supabase RLS policies and column names.")
+        else:
+            st.warning("Identification Required.")
                 
             st.session_state.user = {"name": u_name}
             st.session_state.flow_stage = "hub"
