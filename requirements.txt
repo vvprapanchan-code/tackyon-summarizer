@@ -1,6 +1,7 @@
 streamlit
 google-generativeai
 supabase
+httpx
 requests
 yt-dlp
 youtube-transcript-api

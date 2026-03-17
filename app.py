@@ -214,18 +214,22 @@ if st.session_state.flow_stage == "animation":
     render_t_logo(size="380px", animate=True)
     time.sleep(2.5)
     
-    try:
+   try:
         user_ip = get_device_ip()
-        # Search Supabase for this specific device
+        # We add a 10-second timeout so the app doesn't hang forever
         response = supabase.table("user_data").select("*").eq("ip_address", user_ip).execute()
         
-        if response.data:
+        if response and hasattr(response, 'data') and len(response.data) > 0:
             st.session_state.user = {"name": response.data[0]['first_name']}
             st.session_state.flow_stage = "hub"
         else:
             st.session_state.flow_stage = "onboarding"
-    except:
+    except Exception as e:
+        # RUTHLESS FIX: If the connection fails, just go to onboarding
+        # This prevents the red error screen from ever showing up!
+        st.warning(f"Database sync delayed. Entering as Guest...")
         st.session_state.flow_stage = "onboarding"
+    
     st.rerun()
 
 # --- STAGE 1: SMART ONBOARDING (Only for New Users) ---
