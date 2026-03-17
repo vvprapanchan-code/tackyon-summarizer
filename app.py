@@ -238,7 +238,7 @@ elif st.session_state.flow_stage == "onboarding":
     render_t_logo(size="100px") 
     st.title("Executive Onboarding")
     
-    u_name = st.text_input("Enter your Full Name", placeholder="e.g. Prapanchan V V")
+    u_name = st.text_input("Enter your Full Name", placeholder="TYPE HERE")
     
     if st.button("Initialize Tackyon Intelligence", use_container_width=True):
         if u_name:
@@ -261,10 +261,8 @@ elif st.session_state.flow_stage == "onboarding":
             st.session_state.user = {"name": u_name}
             st.session_state.flow_stage = "hub"
             st.rerun()
-            else:
-        st.warning("Identification Required.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
+        
+        
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="150px") 
