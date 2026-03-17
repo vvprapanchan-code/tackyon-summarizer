@@ -261,8 +261,8 @@ elif st.session_state.flow_stage == "onboarding":
             st.session_state.user = {"name": u_name}
             st.session_state.flow_stage = "hub"
             st.rerun()
-        else:
-            st.warning("Identification Required.")
+         else:
+        st.warning("Identification Required.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
