@@ -212,35 +212,17 @@ if "flow_stage" not in st.session_state:
     st.session_state.flow_stage = "animation"
     st.session_state.daily_kural = get_random_kural()
     st.session_state.chat_history = []
+    # Add this line so the app knows who you are without asking
+    st.session_state.user = {"name": "Executive", "gender": "Executive", "age": 25}
 
 if st.session_state.flow_stage == "animation":
     st.markdown('<div style="height: 30vh;"></div>', unsafe_allow_html=True)
     render_t_logo(size="380px", animate=True)
     time.sleep(2.5)
-    st.session_state.flow_stage = "onboarding"
+    st.session_state.flow_stage = "hub" # This jumps straight to the main app
     st.rerun()
 
-elif st.session_state.flow_stage == "onboarding":
-    st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="100px")
-    st.title("Executive Onboarding")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        u_name = st.text_input("Full Name", placeholder="e.g. Prapanchan V V")
-    with col2:
-        u_gender = st.selectbox("Gender", ["Male", "Female", "Executive"])
-    with col3:
-        u_age = st.number_input("Age", 18, 99, 19)
-
-    if st.button("Initialize", use_container_width=True):
-        if u_name:
-            st.session_state.user = {"name": u_name, "gender": u_gender, "age": u_age}
-            st.session_state.flow_stage = "gateway"
-            st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.flow_stage == "gateway":
     st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
