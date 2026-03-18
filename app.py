@@ -10,9 +10,16 @@ from yt_dlp import YoutubeDL
 from youtube_transcript_api import YouTubeTranscriptApi
 from datetime import datetime
 from gtts import gTTS
+from PIL import Image
 
 # --- 1. THEME & EXECUTIVE ARCHITECTURE (PROTECTED) ---
-st.set_page_config(page_title="Tackyon AI", page_icon="logo.jpg", layout="wide")
+try:
+    # This prepares the logo for the browser tab
+    tab_icon = Image.open("logo.jpg")
+except:
+    tab_icon = "logo.jpg"
+
+st.set_page_config(page_title="Tackyon AI", page_icon=tab_icon, layout="wide")
 
 st.markdown("""
 <style>
