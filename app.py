@@ -259,7 +259,7 @@ else:
 
         if st.button("Generate Intelligence Report", use_container_width=True):
             if url:
-                with st.spinner("Decoding via Gemini 2.5 Flash..."):
+                with st.spinner("Decoding via TACKYON AI ..."):
                     m, t, mode = get_video_data(url)
 
                     if mode == "error": 
