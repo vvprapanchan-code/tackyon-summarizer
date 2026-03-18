@@ -84,9 +84,14 @@ header, [data-testid="stHeader"], .stAppHeader { display: none !important; visib
     justify-content: center; font-weight: 900; margin-right: 12px;
 }
 .assistant-body {
-    background: white; border: 1px solid #1B2631;
-    border-radius: 0 0 15px 15px; padding: 20px; margin-bottom: 40px;
-}
+        background: white; border: 1px solid #1B2631;
+        border-radius: 0 0 15px 15px; padding: 20px; margin-bottom: 40px;
+    }
+
+    /* --- THE CLEANER: Hides Streamlit Footer, Profile Photo, and Name --- */
+    footer {visibility: hidden; display: none;}
+    div[data-testid="stStatusWidget"] {visibility: hidden; display: none;}
+    .stAppDeployButton {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
