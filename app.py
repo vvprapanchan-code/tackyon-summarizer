@@ -227,6 +227,10 @@ if st.session_state.flow_stage == "animation":
 
 
 else:
+    # --- THIRUKURAL BANNER ---
+    st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
+
+    # --- SIDEBAR BRANDING ---
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     render_t_logo(size="150px")
     st.sidebar.markdown(f"### Executive: {st.session_state.user['name']}")
