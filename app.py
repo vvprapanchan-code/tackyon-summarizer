@@ -224,17 +224,7 @@ if st.session_state.flow_stage == "animation":
 
 
 
-elif st.session_state.flow_stage == "gateway":
-    st.markdown(f'<div class="kural-box"><div class="kural-line1">{st.session_state.daily_kural["top"]}</div><div class="kural-line2">{st.session_state.daily_kural["bottom"]}</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="executive-card">', unsafe_allow_html=True)
-    render_t_logo(size="90px")
-    st.info(f"Identity Confirmed: Executive {st.session_state.user['name']}.")
 
-    if st.button("Enter Intelligence Hub", use_container_width=True):
-        st.session_state.flow_stage = "hub"
-        st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     st.sidebar.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
