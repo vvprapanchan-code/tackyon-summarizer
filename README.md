@@ -1,4 +1,4 @@
-# 🚀 TACKYON - The AI Summarizer
+#  TACKYON - The AI Summarizer
 
 Welcome to **Tackyon**, a professional-grade Python application designed for high-efficiency content summarization and unique cultural integration.
 
